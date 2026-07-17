@@ -396,6 +396,8 @@ export default function ReactorView() {
   const [isEditingSub, setIsEditingSub] = useState(false);
   const [editedTextEn, setEditedTextEn] = useState('');
   const [editedTextEs, setEditedTextEs] = useState('');
+  // Lock the editing subtitle ID so it doesn't follow activeSub as video plays
+  const editingSubIdRef = useRef(null);
 
   const playerRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -1992,11 +1994,6 @@ export default function ReactorView() {
                   </div>
                 </div>
               </div>
-
-              {/* RIGHT: Mascot */}
-              <div style={{ flexShrink: 0, width: '200px' }}>
-                <Mascot mood="happy" text={playerType === 'local' ? "¡Leo los subtítulos en voz alta en tiempo real!" : "¡Pasa el ratón sobre cualquier palabra para ver su significado!"} />
-              </div>
             </div>
 
             {/* ── Voice synthesis notice ── */}
@@ -2224,6 +2221,7 @@ export default function ReactorView() {
                                 e.stopPropagation();
                                 setEditedTextEn(sub.en);
                                 setEditedTextEs(sub.es);
+                                editingSubIdRef.current = sub.id;
                                 setIsEditingSub(true);
                                 handleSeek(sub.start);
                               }}
@@ -2245,7 +2243,10 @@ export default function ReactorView() {
                 </div>
 
                 {/* Active clip inline editor (at bottom of timeline) */}
-                {isEditingSub && activeSub && (
+                {isEditingSub && editingSubIdRef.current && (() => {
+                  const editSub = currentSubtitles.find(s => s.id === editingSubIdRef.current);
+                  if (!editSub) return null;
+                  return (
                   <div style={{
                     backgroundColor: '#0f172a',
                     borderTop: '1px solid #1f2937',
@@ -2275,11 +2276,11 @@ export default function ReactorView() {
                       />
                       <input
                         type="number"
-                        value={activeSub.start}
+                        value={editSub.start}
                         step="0.1"
                         onChange={(e) => {
                           const newStart = parseFloat(e.target.value);
-                          const updated = currentSubtitles.map(s => s.id === activeSub.id ? { ...s, start: newStart } : s);
+                          const updated = currentSubtitles.map(s => s.id === editSub.id ? { ...s, start: newStart } : s);
                           saveAllSubtitles(updated);
                         }}
                         style={{ width: '80px', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#1f2937', color: '#fbbf24', border: '1px solid #374151', fontSize: '0.75rem', outline: 'none' }}
@@ -2288,11 +2289,11 @@ export default function ReactorView() {
                       <span style={{ color: '#64748b', alignSelf: 'center', fontSize: '0.75rem' }}>→</span>
                       <input
                         type="number"
-                        value={activeSub.end}
+                        value={editSub.end}
                         step="0.1"
                         onChange={(e) => {
                           const newEnd = parseFloat(e.target.value);
-                          const updated = currentSubtitles.map(s => s.id === activeSub.id ? { ...s, end: newEnd } : s);
+                          const updated = currentSubtitles.map(s => s.id === editSub.id ? { ...s, end: newEnd } : s);
                           saveAllSubtitles(updated);
                         }}
                         style={{ width: '80px', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#1f2937', color: '#fbbf24', border: '1px solid #374151', fontSize: '0.75rem', outline: 'none' }}
@@ -2302,17 +2303,19 @@ export default function ReactorView() {
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         onClick={() => {
-                          const updated = currentSubtitles.filter(s => s.id !== activeSub.id);
+                          const updated = currentSubtitles.filter(s => s.id !== editSub.id);
                           saveAllSubtitles(updated);
                           setIsEditingSub(false);
+                          editingSubIdRef.current = null;
                         }}
                         style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#450a0a', color: '#fca5a5', border: '1px solid #7f1d1d', borderRadius: '6px', cursor: 'pointer' }}
                       >🗑 Eliminar</button>
-                      <button onClick={() => setIsEditingSub(false)} style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: '#1f2937', color: '#94a3b8', border: '1px solid #374151', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
+                      <button onClick={() => { setIsEditingSub(false); editingSubIdRef.current = null; }} style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: '#1f2937', color: '#94a3b8', border: '1px solid #374151', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
                       <button onClick={saveSubtitleEdits} style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#4f46e5', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>✔ Guardar</button>
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* Admin footer hint */}
                 <div style={{ padding: '6px 20px', backgroundColor: '#0f172a', borderTop: '1px solid #1f2937' }}>
@@ -2635,6 +2638,16 @@ export default function ReactorView() {
                 </div>
               )}
             </div>
+
+            {/* ── Mascot pinned at bottom of sidebar (zona verde) ── */}
+            <div style={{
+              borderTop: '1px solid var(--border)',
+              padding: '12px 16px',
+              backgroundColor: 'var(--surface)',
+              flexShrink: 0
+            }}>
+              <Mascot mood="happy" text={playerType === 'local' ? "¡Leo los subtítulos en voz alta en tiempo real!" : "¡Pasa el ratón sobre cualquier palabra en inglés para ver su significado!"} />
+            </div>
           </div>
         </div>
       </div>
@@ -2644,77 +2657,196 @@ export default function ReactorView() {
   return (
     <div className="view-container" style={{ position: 'relative' }}>
       
-      {/* Cinema Screen Turn-On Intro Overlay (Minimalist Page Reveal) */}
+      {/* ═══════════════════════════════════════════════════
+          TV BROADCAST INTRO OVERLAY
+          ═══════════════════════════════════════════════════ */}
       {introActive && (
-        <div className={`cinema-intro-overlay ${introFade ? 'fade-out' : ''}`}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
-            
-            {/* Logo PNG real de Mentora con animación de aparición */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'logoGlowIn 1.2s ease forwards' }}>
-              <img
-                src="/assets/logo.png"
-                alt="Mentora"
-                style={{
-                  height: '72px',
-                  width: 'auto',
-                  objectFit: 'contain',
-                  display: 'block',
-                  filter: 'drop-shadow(0 0 18px rgba(79,70,229,0.7)) brightness(1.08)',
-                  animation: 'logoFadeIn 1s ease forwards'
-                }}
-              />
-            </div>
+        <div className={`cinema-intro-overlay ${introFade ? 'fade-out' : ''}`}
+          style={{ fontFamily: "'Outfit', sans-serif", overflow: 'hidden' }}
+        >
+          {/* CRT Scan Lines overlay */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+            backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 3px)',
+            backgroundSize: '100% 3px'
+          }} />
 
-            {/* Minimalist horizontal progress bar */}
+          {/* CRT Vignette */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%)'
+          }} />
+
+          {/* Static noise flicker top stripe */}
+          <div className="tv-static-stripe" style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: '4px', zIndex: 5,
+            background: 'linear-gradient(90deg, #fff 0%, #aaa 20%, #fff 40%, #666 60%, #fff 80%, #aaa 100%)',
+            opacity: 0.15, animation: 'tvStaticMove 0.08s steps(1) infinite'
+          }} />
+
+          {/* Phase 1 — TV Color Bars (shown for first ~1.5s via loaderProgress) */}
+          {loaderProgress < 35 && (
             <div style={{
-              width: '180px',
-              height: '3px',
-              backgroundColor: '#e2e8f0',
-              borderRadius: '9999px',
-              overflow: 'hidden',
-              position: 'relative'
+              position: 'absolute', inset: 0, zIndex: 1,
+              display: 'flex', flexDirection: 'column'
             }}>
-              <div style={{
-                height: '100%',
-                width: `${loaderProgress}%`,
-                backgroundColor: '#4f46e5',
-                borderRadius: '9999px',
-                transition: 'width 0.05s linear'
-              }} />
+              {/* Top 75%: Classic SMPTE color bars */}
+              <div style={{ flex: '0 0 75%', display: 'flex' }}>
+                {[
+                  { color: '#c0c0c0', label: 'W' },
+                  { color: '#c0c000', label: 'Y' },
+                  { color: '#00c0c0', label: 'C' },
+                  { color: '#00c000', label: 'G' },
+                  { color: '#c000c0', label: 'M' },
+                  { color: '#c00000', label: 'R' },
+                  { color: '#0000c0', label: 'B' },
+                ].map((bar, i) => (
+                  <div key={i} style={{
+                    flex: 1, backgroundColor: bar.color,
+                    display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                    paddingBottom: '6px'
+                  }}>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(0,0,0,0.4)', letterSpacing: '0.05em' }}>{bar.label}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Bottom 25%: Blue/Black/Magenta stripe */}
+              <div style={{ flex: '0 0 25%', display: 'flex' }}>
+                {['#00008b', '#101010', '#9b00c4', '#101010', '#c0c0c0', '#101010', '#0000c0'].map((c, i) => (
+                  <div key={i} style={{ flex: 1, backgroundColor: c }} />
+                ))}
+              </div>
             </div>
+          )}
 
-          </div>
+          {/* Phase 2 — Black screen with TV noise (35-60%) */}
+          {loaderProgress >= 35 && loaderProgress < 60 && (
+            <div className="tv-noise-bg" style={{
+              position: 'absolute', inset: 0, zIndex: 1,
+              backgroundColor: '#050505',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E")`,
+              backgroundSize: '200px 200px',
+              animation: 'tvNoiseShift 0.1s steps(2) infinite'
+            }}>
+              {/* "NO SIGNAL" text */}
+              <div style={{
+                position: 'absolute', inset: 0, display: 'flex',
+                flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px'
+              }}>
+                <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.3em', textShadow: '0 0 20px rgba(255,255,255,0.5)', animation: 'tvBlink 0.6s step-start infinite' }}>
+                  ◼ NO SIGNAL
+                </span>
+                <span style={{ fontSize: '0.7rem', color: '#888', letterSpacing: '0.2em' }}>AV-1 / CH.04</span>
+              </div>
+            </div>
+          )}
 
+          {/* Phase 3 — Logo Reveal (60%+) */}
+          {loaderProgress >= 60 && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 1,
+              backgroundColor: '#000008',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '32px'
+            }}>
+
+              {/* Channel badge top-right */}
+              <div style={{
+                position: 'absolute', top: '28px', right: '36px',
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px'
+              }}>
+                <div style={{
+                  border: '2px solid rgba(79,70,229,0.8)', borderRadius: '6px',
+                  padding: '3px 10px', color: '#818cf8', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.15em'
+                }}>CH. 04</div>
+                <span style={{ fontSize: '0.55rem', color: '#475569', letterSpacing: '0.1em' }}>MENTORA BROADCAST</span>
+              </div>
+
+              {/* Broadcast timestamp top-left */}
+              <div style={{
+                position: 'absolute', top: '28px', left: '36px',
+                display: 'flex', gap: '8px', alignItems: 'center'
+              }}>
+                <div style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  backgroundColor: '#ef4444',
+                  boxShadow: '0 0 10px #ef4444',
+                  animation: 'tvBlink 1s ease infinite'
+                }} />
+                <span style={{ fontSize: '0.65rem', color: '#64748b', letterSpacing: '0.1em', fontWeight: 600 }}>EN VIVO · HD</span>
+              </div>
+
+              {/* Main logo with CRT glow */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', animation: 'logoFadeIn 0.8s ease forwards' }}>
+                <div style={{ position: 'relative' }}>
+                  {/* Horizontal scanline on logo */}
+                  <div className="tv-logo-scanline" style={{
+                    position: 'absolute', top: 0, left: '-10%', width: '120%', height: '3px',
+                    background: 'linear-gradient(90deg, transparent, rgba(129,140,248,0.9), transparent)',
+                    animation: 'tvScanlineMove 2s linear infinite', zIndex: 2
+                  }} />
+                  <img
+                    src="/assets/logo.png"
+                    alt="Mentora"
+                    style={{
+                      height: '80px', width: 'auto', objectFit: 'contain', display: 'block',
+                      filter: 'drop-shadow(0 0 30px rgba(79,70,229,0.9)) drop-shadow(0 0 8px rgba(14,165,233,0.6)) brightness(1.1)',
+                    }}
+                  />
+                </div>
+
+                <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#4f46e5', letterSpacing: '0.4em', fontWeight: 700, textTransform: 'uppercase' }}>
+                    ─── PRESENTA ───
+                  </span>
+                  <span style={{ fontSize: '1.1rem', color: '#e2e8f0', fontWeight: 600, letterSpacing: '0.05em' }}>
+                    Cine Reactor
+                  </span>
+                  <span style={{ fontSize: '0.65rem', color: '#475569', letterSpacing: '0.2em' }}>
+                    Aprende inglés · Temporada 1
+                  </span>
+                </div>
+              </div>
+
+              {/* Bottom broadcast bar */}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0,
+                height: '48px',
+                background: 'linear-gradient(90deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+                borderTop: '1px solid #1e3a8a',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0 32px'
+              }}>
+                <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.6rem', color: '#4f46e5', fontWeight: 800, letterSpacing: '0.15em' }}>MENTORA TV</span>
+                  <span style={{ fontSize: '0.6rem', color: '#334155', letterSpacing: '0.08em' }}>INGLÉS · SUBTÍTULOS BILINGÜE · HD 1080p</span>
+                </div>
+                {/* Progress bar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '120px', height: '2px', backgroundColor: '#1e3a8a', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min(((loaderProgress - 60) / 40) * 100, 100)}%`, backgroundColor: '#4f46e5', transition: 'width 0.05s linear' }} />
+                  </div>
+                  <span style={{ fontSize: '0.55rem', color: '#475569', fontWeight: 600 }}>CARGANDO</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Skip button */}
           <button
-            onClick={() => {
-              setIntroActive(false);
-              sounds.playCompleted();
-            }}
+            onClick={() => { setIntroActive(false); sounds.playCompleted(); }}
             style={{
-              position: 'absolute',
-              bottom: '40px',
-              background: '#f1f5f9',
-              border: '1.5px solid #cbd5e1',
-              borderRadius: '9999px',
-              color: '#64748b',
-              padding: '6px 16px',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              zIndex: 100,
-              fontFamily: "'Outfit', sans-serif",
-              transition: 'all 0.2s',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.03)'
+              position: 'absolute', bottom: '64px', right: '32px',
+              background: 'rgba(15,23,42,0.8)',
+              border: '1px solid rgba(79,70,229,0.5)',
+              borderRadius: '6px',
+              color: '#94a3b8', padding: '6px 16px', fontSize: '0.75rem', cursor: 'pointer',
+              zIndex: 100, letterSpacing: '0.1em', fontFamily: "'Outfit', sans-serif",
+              transition: 'all 0.2s', backdropFilter: 'blur(4px)'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#e2e8f0';
-              e.currentTarget.style.color = '#0f172a';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#f1f5f9';
-              e.currentTarget.style.color = '#64748b';
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = '#4f46e5'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(79,70,229,0.5)'; }}
           >
-            Omitir ⏭
+            SALTAR ⏭
           </button>
         </div>
       )}
