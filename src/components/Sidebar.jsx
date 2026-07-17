@@ -62,8 +62,11 @@ export default function Sidebar({ activeView, onViewChange }) {
   return (
     <aside className="sidebar">
       <div className="logo-container" onClick={() => onViewChange('learn')}>
-        <div className="logo-icon">M</div>
-        <span>Mentora</span>
+        <img
+          src="/assets/logo.png"
+          alt="Mentora"
+          style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block', filter: 'brightness(0) invert(1)' }}
+        />
       </div>
 
       <nav className="sidebar-nav">

@@ -2649,19 +2649,20 @@ export default function ReactorView() {
         <div className={`cinema-intro-overlay ${introFade ? 'fade-out' : ''}`}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
             
-            {/* Minimalist animated vector Mentora logo drawing */}
-            <div style={{ position: 'relative', width: 320, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg viewBox="0 0 295 80" width="220" height="60">
-                <g fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="logo-paths">
-                  <path d="M15,68 V32 c0,-9.4 7.6,-17 17,-17 s17,7.6 17,17 v36 h-8 V32 c0,-5 -4,-9 -9,-9 s-9,4 -9,9 v36 h-8 V32 c0,-5 -4,-9 -9,-9 s-9,4 -9,9 v36 h-8 Z" className="draw-path p1" />
-                  <path d="M97,33 c-9.4,0 -17,7.6 -17,17 s7.6,17 17,17 c7.5,0 13.9,-4.8 16.1,-11.5 h-8.8 c-1.4,2.2 -3.8,3.5 -6.5,3.5 c-5,0 -9,-4 -9,-9 h25.4 c0.1,-0.6 0.1,-1.2 0.1,-1.8 C114,40.6 106.4,33 97,33 Z M88.2,46.5 c0.5,-4 3.9,-7 7.8,-7 s7.3,3 7.8,7 Z" className="draw-path p2" />
-                  <path d="M119,68 V32 c0,-9.4 7.6,-17 17,-17 s17,7.6 17,17 v36 h-8 V32 c0,-5 -4,-9 -9,-9 s-9,4 -9,9 v36 h-8 Z" className="draw-path p3" />
-                  <path d="M161,20 L161,24 H153 V32 H161 V56 c0,6.6 5.4,12 12,12 h6 V60 h-6 c-2.2,0 -4,-1.8 -4,-4 V32 H177 V24 H169 V14 Z" className="draw-path p4" />
-                  <path d="M197,33 c-9.4,0 -17,7.6 -17,17 s7.6,17 17,17 s17,-7.6 17,-17 S206.4,33 197,33 Z M197,41 c5,0 9,4 9,9 s-4,9 -9,9 s-9,-4 -9,-9 S192,41 197,41 Z" className="draw-path p5" />
-                  <path d="M219,68 V32 c0,-9.4 7.6,-17 17,-17 h4 v8 h-4 c-5,0 -9,4 -9,9 v36 h-8 Z" className="draw-path p6" />
-                  <path d="M262,33 c-9.4,0 -17,7.6 -17,17 s7.6,17 17,17 c5.1,0 9.6,-2.2 12.7,-5.7 V68 h8 V32 h-8 v3.5 C271.6,35.2 267.1,33 262,33 Z M262,41 c5,0 9,4 9,9 s-4,9 -9,9 s-9,-4 -9,-9 S257,41 262,41 Z" className="draw-path p7" />
-                </g>
-              </svg>
+            {/* Logo PNG real de Mentora con animación de aparición */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'logoGlowIn 1.2s ease forwards' }}>
+              <img
+                src="/assets/logo.png"
+                alt="Mentora"
+                style={{
+                  height: '72px',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  display: 'block',
+                  filter: 'drop-shadow(0 0 18px rgba(79,70,229,0.7)) brightness(1.08)',
+                  animation: 'logoFadeIn 1s ease forwards'
+                }}
+              />
             </div>
 
             {/* Minimalist horizontal progress bar */}
