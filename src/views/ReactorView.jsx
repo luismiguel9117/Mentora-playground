@@ -3,7 +3,7 @@ import { sounds } from '../components/SoundManager';
 import Mascot from '../components/Mascot';
 
 // Curated Video Lessons Database
-const videoCatalog = [
+const defaultVideoCatalog = [
   {
     id: 'UF8uR6Z6KLc',
     type: 'youtube',
@@ -265,6 +265,24 @@ export default function ReactorView() {
   const [localVideoUrl, setLocalVideoUrl] = useState('https://media.w3.org/2010/05/sintel/trailer_hd.mp4');
   const [localVideoName, setLocalVideoName] = useState('Sintel HD Trailer');
 
+  const [videoCatalog, setVideoCatalog] = useState(defaultVideoCatalog);
+
+  // Load dynamic video catalog from JSON file on mount
+  useEffect(() => {
+    async function loadCatalog() {
+      try {
+        const res = await fetch('/video-catalog.json');
+        if (res.ok) {
+          const data = await res.json();
+          setVideoCatalog(data);
+        }
+      } catch (e) {
+        console.warn("Failed to load video-catalog.json, using static fallback:", e);
+      }
+    }
+    loadCatalog();
+  }, []);
+
   // Search & Filters for Catalog Lobby
   const [searchQuery, setSearchQuery] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('Todos');
@@ -273,24 +291,44 @@ export default function ReactorView() {
   const [currentSubtitles, setCurrentSubtitles] = useState(jobsSubtitles);
   const [currentDictionary, setCurrentDictionary] = useState(jobsDictionary);
 
-  // Load subtitles from localStorage or default preset when videoId changes
+  // Load subtitles from public JSON files, localStorage or default preset when videoId changes
   useEffect(() => {
-    const saved = localStorage.getItem(`mentora_subtitles_${videoId}`);
-    if (saved) {
-      setCurrentSubtitles(JSON.parse(saved));
-    } else {
-      if (videoId === 'UF8uR6Z6KLc') {
-        setCurrentSubtitles(jobsSubtitles);
-      } else if (videoId === 'LEjhYkp8P5M') {
-        setCurrentSubtitles(insideOutSubtitles);
-      } else if (videoId === 'hLAWN2_Z418') {
-        setCurrentSubtitles(lcdpSubtitles);
-      } else if (videoId === 'local') {
-        setCurrentSubtitles(localSubtitles);
+    let active = true;
+    async function loadSubs() {
+      try {
+        const response = await fetch(`/subtitles/${videoId}.json`);
+        if (response.ok && active) {
+          const data = await response.json();
+          if (Array.isArray(data)) {
+            setCurrentSubtitles(data);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch public subtitle file:", err);
+      }
+
+      if (!active) return;
+      const saved = localStorage.getItem(`mentora_subtitles_${videoId}`);
+      if (saved) {
+        setCurrentSubtitles(JSON.parse(saved));
       } else {
-        setCurrentSubtitles([]);
+        if (videoId === 'UF8uR6Z6KLc') {
+          setCurrentSubtitles(jobsSubtitles);
+        } else if (videoId === 'LEjhYkp8P5M') {
+          setCurrentSubtitles(insideOutSubtitles);
+        } else if (videoId === 'hLAWN2_Z418') {
+          setCurrentSubtitles(lcdpSubtitles);
+        } else if (videoId === 'local') {
+          setCurrentSubtitles(localSubtitles);
+        } else {
+          setCurrentSubtitles([]);
+        }
       }
     }
+
+    loadSubs();
+    return () => { active = false; };
   }, [videoId]);
 
   // Persist all subtitle edits
@@ -300,7 +338,7 @@ export default function ReactorView() {
   };
 
   const [currentTime, setCurrentTime] = useState(0);
-  const [activeTab, setActiveTab] = useState('TEXTO'); // 'TEXTO' | 'PALABRAS'
+  const [activeTab, setActiveTab] = useState('SUBTÍTULOS'); // 'SUBTÍTULOS' | 'PALABRAS' | 'GUARDADO'
   const [hoveredWord, setHoveredWord] = useState(null);
   const [savedWords, setSavedWords] = useState(() => {
     const saved = localStorage.getItem('mentora_saved_words');
@@ -314,15 +352,14 @@ export default function ReactorView() {
   const [isAutoPause, setIsAutoPause] = useState(false); // AP toggle
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0); // 1x, 0.75x, etc.
   const [showHotkeysHelper, setShowHotkeysHelper] = useState(true);
-  const [isAdminMode, setIsAdminMode] = useState(false);
+
   const lastSubIdRef = useRef(null);
 
   // Modal & AI Generator State
   const [showModal, setShowModal] = useState(false);
   const [uploadUrl, setUploadUrl] = useState('');
   const [transcribing, setTranscribing] = useState(false);
-  const [transcribeProgress, setTranscribeProgress] = useState(0);
-  const [transcribeStatus, setTranscribeStatus] = useState('');
+
 
   // Custom Controls Overlay States
   const [videoDuration, setVideoDuration] = useState(0);
@@ -391,13 +428,6 @@ export default function ReactorView() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
-
-  // Subtitle Editor State
-  const [isEditingSub, setIsEditingSub] = useState(false);
-  const [editedTextEn, setEditedTextEn] = useState('');
-  const [editedTextEs, setEditedTextEs] = useState('');
-  // Lock the editing subtitle ID so it doesn't follow activeSub as video plays
-  const editingSubIdRef = useRef(null);
 
   const playerRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -514,21 +544,20 @@ export default function ReactorView() {
       
       // Load corresponding subtitles and dictionaries
       if (lesson.id === 'UF8uR6Z6KLc') {
-        setCurrentSubtitles(jobsSubtitles);
         setCurrentDictionary(jobsDictionary);
       } else if (lesson.id === 'LEjhYkp8P5M') {
-        setCurrentSubtitles(insideOutSubtitles);
         setCurrentDictionary(insideOutDictionary);
       } else if (lesson.id === 'hLAWN2_Z418') {
-        setCurrentSubtitles(lcdpSubtitles);
         setCurrentDictionary(lcdpDictionary);
+      } else {
+        setCurrentDictionary({});
       }
     } else {
       setPlayerType('local');
-      setLocalVideoUrl('https://media.w3.org/2010/05/sintel/trailer_hd.mp4');
-      setLocalVideoName('Sintel HD Trailer');
-      setCurrentSubtitles(localSubtitles);
-      setCurrentDictionary(localDictionary);
+      setVideoId(lesson.id);
+      setLocalVideoUrl(lesson.url || 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4');
+      setLocalVideoName(lesson.title || 'Video Local');
+      setCurrentDictionary(lesson.id === 'local' ? localDictionary : {});
     }
 
     setCurrentView('player');
@@ -641,6 +670,7 @@ export default function ReactorView() {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
+      playerRef.current = null;
     };
   }, [videoId, playerType, currentView]);
 
@@ -661,16 +691,7 @@ export default function ReactorView() {
     (s) => currentTime >= s.start && currentTime <= s.end
   );
 
-  // Load active subtitles into editor if editing is toggled
-  useEffect(() => {
-    if (activeSub) {
-      setEditedTextEn(activeSub.en);
-      setEditedTextEs(activeSub.es);
-    } else {
-      setEditedTextEn('');
-      setEditedTextEs('');
-    }
-  }, [activeSub?.id]);
+
 
   // Web Speech API Narrator Fallback for Local Silent Video
   useEffect(() => {
@@ -768,7 +789,7 @@ export default function ReactorView() {
 
   // Auto-scroll transcript line
   useEffect(() => {
-    if (activeItemRef.current && activeTab === 'TEXTO') {
+    if (activeItemRef.current && activeTab === 'SUBTÍTULOS') {
       try {
         activeItemRef.current.scrollIntoView({
           behavior: 'smooth',
@@ -881,23 +902,7 @@ export default function ReactorView() {
     }
   };
 
-  // Local subtitle line text edit (Live sync updates)
-  const saveSubtitleEdits = () => {
-    if (activeSub) {
-      setCurrentSubtitles(prev => prev.map(s => {
-        if (s.id === activeSub.id) {
-          return {
-            ...s,
-            en: editedTextEn,
-            es: editedTextEs
-          };
-        }
-        return s;
-      }));
-      sounds.playCorrect();
-      setIsEditingSub(false);
-    }
-  };
+
 
   const toggleSaveWord = (wordKey, definition) => {
     setSavedWords((prev) => {
@@ -922,9 +927,10 @@ export default function ReactorView() {
   const handleWordHover = (event, wordText) => {
     const wordKey = wordText.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
     const rect = event.target.getBoundingClientRect();
-    const parentRect = event.currentTarget.parentNode.getBoundingClientRect();
-    const x = rect.left - parentRect.left + rect.width / 2;
-    const y = rect.top - parentRect.top;
+    const container = document.querySelector('.video-player-container');
+    const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
+    const x = rect.left - containerRect.left + rect.width / 2;
+    const y = rect.top - containerRect.top;
 
     const definition = (currentDictionary || {})[wordKey];
 
@@ -1405,17 +1411,17 @@ export default function ReactorView() {
             >
               {/* Graphic Card Cover */}
               <div style={{
-                background: lesson.color,
+                background: lesson.thumbnail ? `url(${lesson.thumbnail}) center/cover no-repeat` : (lesson.color || 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'),
                 height: '130px',
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '3.5rem',
+                fontSize: lesson.thumbnail ? '0rem' : '3.5rem',
                 color: '#ffffff',
                 position: 'relative'
               }}>
-                {lesson.emoji}
+                {!lesson.thumbnail && (lesson.emoji || '🎬')}
                 {/* Duration Tag */}
                 <span style={{
                   position: 'absolute',
@@ -1429,7 +1435,7 @@ export default function ReactorView() {
                   borderRadius: '6px',
                   backdropFilter: 'blur(4px)'
                 }}>
-                  ⏱️ {lesson.duration}
+                  ⏱️ {lesson.duration || 'Lección'}
                 </span>
               </div>
 
@@ -1440,15 +1446,15 @@ export default function ReactorView() {
                     fontSize: '0.75rem',
                     fontWeight: 800,
                     textTransform: 'uppercase',
-                    color: lesson.difficultyKey === 'A2' ? '#10b981' : lesson.difficultyKey === 'B1' ? '#0ea5e9' : '#4f46e5',
-                    backgroundColor: lesson.difficultyKey === 'A2' ? '#ecfdf5' : lesson.difficultyKey === 'B1' ? '#f0f9ff' : '#eef2ff',
+                    color: (lesson.difficultyKey || 'B1') === 'A2' ? '#10b981' : (lesson.difficultyKey || 'B1') === 'B1' ? '#0ea5e9' : '#4f46e5',
+                    backgroundColor: (lesson.difficultyKey || 'B1') === 'A2' ? '#ecfdf5' : (lesson.difficultyKey || 'B1') === 'B1' ? '#f0f9ff' : '#eef2ff',
                     padding: '2px 8px',
                     borderRadius: '6px'
                   }}>
-                    {lesson.difficultyKey}
+                    {lesson.difficultyKey || 'B1'}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
-                    {lesson.category}
+                    {lesson.category || 'General'}
                   </span>
                 </div>
 
@@ -1468,7 +1474,7 @@ export default function ReactorView() {
                   lineHeight: '1.5',
                   flexGrow: 1
                 }}>
-                  {lesson.description}
+                  {lesson.description || 'Aprende inglés interactivo y vocabulario bilingüe en tiempo real con este video.'}
                 </p>
 
                 <div style={{
@@ -1579,20 +1585,20 @@ export default function ReactorView() {
             <button 
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-secondary)' }}
               onClick={handlePrevSub}
-              title="Video anterior (A)"
+              title="Frase anterior (A)"
             >
               ⏮
             </button>
             <button 
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-secondary)' }}
               onClick={handleNextSub}
-              title="Siguiente video (D)"
+              title="Siguiente frase (D)"
             >
               ⏭
             </button>
             <div style={{ height: '18px', width: '1.5px', backgroundColor: 'var(--border)' }}></div>
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {playerType === 'youtube' ? 'Jobs Stanford Address' : localVideoName}
+              {playerType === 'youtube' ? (videoCatalog.find(v => v.id === videoId)?.title || 'Video Lección') : localVideoName}
             </span>
             <span style={{ fontSize: '0.8rem', opacity: 0.5, cursor: 'help' }} title="Módulo interactivo Cine Reactor">ⓘ</span>
           </div>
@@ -1612,68 +1618,6 @@ export default function ReactorView() {
               title="Mostrar/Ocultar atajos de teclado"
             >
               ⌨️
-            </button>
-
-            {/* Settings */}
-            <button 
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-secondary)' }}
-              onClick={() => setShowModal(true)}
-              title="Configuración de vídeo y subtítulos"
-            >
-              ⚙️
-            </button>
-
-            {/* Auto-Pause Toggle Icon */}
-            <button
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                border: '1.5px solid var(--border)',
-                borderRadius: '9999px',
-                backgroundColor: isAutoPause ? '#ecfdf5' : '#f8fafc',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                color: isAutoPause ? 'var(--success)' : 'var(--text-secondary)'
-              }}
-              onClick={() => setIsAutoPause(!isAutoPause)}
-              title="Auto-Pausa: Detiene el vídeo al final de cada frase (Q)"
-            >
-              <span style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: isAutoPause ? 'var(--success)' : '#94a3b8',
-                display: 'inline-block'
-              }}></span>
-              AP
-            </button>
-
-            {/* Admin/Editor Mode Toggle Switch */}
-            <button
-              onClick={() => {
-                setIsAdminMode(!isAdminMode);
-                sounds.playCorrect();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                border: '1.5px solid var(--border)',
-                borderRadius: '9999px',
-                backgroundColor: isAdminMode ? 'rgba(79, 70, 229, 0.1)' : '#f8fafc',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                color: isAdminMode ? 'var(--primary)' : 'var(--text-secondary)',
-                transition: 'all 0.2s'
-              }}
-              title="Activar/Desactivar Modo Administrador (Línea de tiempo de edición al estilo Premiere)"
-            >
-              🔑 {isAdminMode ? 'Admin Activo' : 'Admin'}
             </button>
 
             {/* Playback speed selector */}
@@ -1729,7 +1673,8 @@ export default function ReactorView() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
-                animation: 'popIn 0.3s ease'
+                animation: 'popIn 0.3s ease',
+                marginBottom: '8px'
               }}>
                 <span>⚠️</span>
                 <span>
@@ -1785,7 +1730,232 @@ export default function ReactorView() {
                 ></video>
               )}
 
-              {/* Custom Overlay Video Controls Bar ONLY — no subtitles inside player */}
+              {/* Phrase Navigation: Left Vertical Controls (Next, Replay, Prev) */}
+              <div 
+                className="phrase-vertical-controls"
+                style={{
+                  position: 'absolute',
+                  left: '14px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  zIndex: 25
+                }}
+              >
+                <button 
+                  onClick={handleNextSub}
+                  title="Siguiente Frase (D)"
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                    color: '#ffffff',
+                    border: '1.5px solid rgba(255,255,255,0.2)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    transition: 'transform 0.15s, background-color 0.15s',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.backgroundColor = 'rgba(79, 70, 229, 0.9)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.75)'; }}
+                >
+                  ➔
+                </button>
+                <button 
+                  onClick={handleReplaySub}
+                  title="Repetir esta Frase (S)"
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                    color: '#ffffff',
+                    border: '1.5px solid rgba(255,255,255,0.2)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.1rem',
+                    transition: 'transform 0.15s, background-color 0.15s',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.backgroundColor = 'rgba(79, 70, 229, 0.9)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.75)'; }}
+                >
+                  ⟳
+                </button>
+                <button 
+                  onClick={handlePrevSub}
+                  title="Frase Anterior (A)"
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                    color: '#ffffff',
+                    border: '1.5px solid rgba(255,255,255,0.2)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    transition: 'transform 0.15s, background-color 0.15s',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.backgroundColor = 'rgba(79, 70, 229, 0.9)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.75)'; }}
+                >
+                  ⬅
+                </button>
+              </div>
+
+              {/* Auto-Pause Toggle: Right Vertical Control (AP) */}
+              <div 
+                className="ap-vertical-control"
+                style={{
+                  position: 'absolute',
+                  right: '14px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  zIndex: 25,
+                  backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                  padding: '8px 6px',
+                  borderRadius: '20px',
+                  border: '1.5px solid rgba(255,255,255,0.2)',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                  userSelect: 'none'
+                }}
+              >
+                {/* Switch slider */}
+                <div 
+                  onClick={() => {
+                    setIsAutoPause(!isAutoPause);
+                    sounds.playCorrect();
+                  }}
+                  style={{
+                    width: '32px',
+                    height: '18px',
+                    borderRadius: '9px',
+                    backgroundColor: isAutoPause ? '#10b981' : '#4b5563',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  title="Auto-Pausa: Pausar al terminar cada frase (Q)"
+                >
+                  <div style={{
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '50%',
+                    backgroundColor: '#ffffff',
+                    position: 'absolute',
+                    top: '2px',
+                    left: isAutoPause ? '16px' : '2px',
+                    transition: 'left 0.2s'
+                  }} />
+                </div>
+                <span style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  color: isAutoPause ? '#10b981' : '#94a3b8',
+                  marginTop: '2px',
+                  fontFamily: "'Outfit', sans-serif"
+                }}>
+                  AP
+                </span>
+              </div>
+
+              {/* Subtitles Overlay Center/Bottom inside Video Player */}
+              {activeSub && (
+                <div 
+                  className="subtitles-video-overlay"
+                  style={{
+                    position: 'absolute',
+                    bottom: '68px', // Sit safely above controls bar
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '85%',
+                    textAlign: 'center',
+                    zIndex: 20,
+                    pointerEvents: 'auto',
+                    userSelect: 'none'
+                  }}
+                >
+                  <div style={{
+                    display: 'inline-block',
+                    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                    padding: '8px 18px',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                    border: '1.5px solid rgba(255,255,255,0.1)'
+                  }}>
+                    {/* Primary English Subtitle Line */}
+                    <div className="subtitle-line primary-lang" style={{ justifyContent: 'center', fontSize: '1.35rem', fontWeight: 700, color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {renderHoverableSentence(activeSub.en)}
+                    </div>
+                    {/* Secondary Spanish Translation Line */}
+                    <div className="subtitle-line secondary-lang" style={{ justifyContent: 'center', fontSize: '1.05rem', fontWeight: 500, color: '#cbd5e1', marginTop: '4px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {renderHoverableSentence(activeSub.es)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Word dynamic hover tooltip overlayed directly inside Player Container */}
+              {hoveredWord && (
+                <div
+                  className="word-reactor-tooltip"
+                  style={{ 
+                    position: 'absolute',
+                    left: `${hoveredWord.x}px`, 
+                    bottom: `calc(100% - ${hoveredWord.y - 12}px)`,
+                    zIndex: 99999
+                  }}
+                  onMouseEnter={() => setHoveredWord(hoveredWord)}
+                  onMouseLeave={handleWordLeave}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span className="tooltip-word-title">
+                      {hoveredWord.text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")}
+                    </span>
+                    <button
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginLeft: '6px' }}
+                      onClick={() => safeSpeakSpeech(hoveredWord.text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, ""))}
+                    >🔊</button>
+                    {!hoveredWord.loading && (
+                      <button
+                        className={`star-save-word-btn ${hoveredWord.isSaved ? 'saved' : ''}`}
+                        onClick={() => toggleSaveWord(hoveredWord.key, { translation: hoveredWord.translation, alternatives: hoveredWord.alternatives, category: hoveredWord.category })}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={hoveredWord.isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <span className="tooltip-word-category">{hoveredWord.category}</span>
+                  <div className="tooltip-word-meaning">
+                    {hoveredWord.loading ? <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>Traduciendo...</span> : hoveredWord.translation}
+                  </div>
+                  {!hoveredWord.loading && hoveredWord.alternatives && (
+                    <div className="tooltip-word-alternatives"><span style={{ fontWeight: 700 }}>Alt:</span> {hoveredWord.alternatives.join(", ")}</div>
+                  )}
+                </div>
+              )}
+
+              {/* Custom Overlay Video Controls Bar */}
               <div 
                 className="custom-video-controls"
                 style={{
@@ -1868,481 +2038,39 @@ export default function ReactorView() {
                 </button>
               </div>
             </div>
-
-            {/* ── Segmented Subtitle Timeline (always visible below player) ── */}
-            <div style={{ marginTop: '8px', marginBottom: '4px' }}>
-              <div style={{ display: 'flex', gap: '3px', width: '100%', height: '6px' }}>
-                {currentSubtitles.map((sub) => {
-                  const isActive = currentTime >= sub.start && currentTime <= sub.end;
-                  const totalDur = currentSubtitles[currentSubtitles.length - 1]?.end || 60;
-                  const pct = ((sub.end - sub.start) / totalDur) * 100;
-                  return (
-                    <div
-                      key={sub.id}
-                      onClick={() => handleSeek(sub.start)}
-                      title={`#${sub.id}: ${sub.en}`}
-                      style={{
-                        flexGrow: pct, height: '100%',
-                        backgroundColor: isActive ? '#4f46e5' : 'rgba(100,116,139,0.25)',
-                        borderRadius: '4px', cursor: 'pointer',
-                        transition: 'background-color 0.2s, transform 0.15s',
-                        transform: isActive ? 'scaleY(1.5)' : 'scaleY(1)'
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ── Subtitle Panel + Mascot (side by side below player) ── */}
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginTop: '8px' }}>
-              
-              {/* LEFT: Subtitle display card */}
-              <div className="subtitles-player-bar" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-                {/* Word tooltip */}
-                {hoveredWord && (
-                  <div
-                    className="word-reactor-tooltip"
-                    style={{ left: `${hoveredWord.x}px`, bottom: `calc(100% - ${hoveredWord.y - 12}px)` }}
-                    onMouseEnter={() => setHoveredWord(hoveredWord)}
-                    onMouseLeave={handleWordLeave}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <span className="tooltip-word-title">
-                        {hoveredWord.text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")}
-                      </span>
-                      <button
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginLeft: '6px' }}
-                        onClick={() => safeSpeakSpeech(hoveredWord.text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, ""))}
-                      >🔊</button>
-                      {!hoveredWord.loading && (
-                        <button
-                          className={`star-save-word-btn ${hoveredWord.isSaved ? 'saved' : ''}`}
-                          onClick={() => toggleSaveWord(hoveredWord.key, { translation: hoveredWord.translation, alternatives: hoveredWord.alternatives, category: hoveredWord.category })}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={hoveredWord.isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    <span className="tooltip-word-category">{hoveredWord.category}</span>
-                    <div className="tooltip-word-meaning">
-                      {hoveredWord.loading ? <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>Traduciendo...</span> : hoveredWord.translation}
-                    </div>
-                    {!hoveredWord.loading && hoveredWord.alternatives && (
-                      <div className="tooltip-word-alternatives"><span style={{ fontWeight: 700 }}>Alternativas:</span> {hoveredWord.alternatives.join(", ")}</div>
-                    )}
-                  </div>
-                )}
-
-                {/* Controls row + subtitle text */}
-                <div className="subtitles-controls-row">
-                  <div className="sub-nav-buttons" style={{ gap: '6px' }}>
-                    <button className="sub-ctrl-btn" onClick={handlePrevSub} title="Anterior (A)">◀</button>
-                    <button className="sub-ctrl-btn" onClick={handleReplaySub} title="Repetir (S)">↻</button>
-                    <button className="sub-ctrl-btn" onClick={handleNextSub} title="Siguiente (D)">▶</button>
-                  </div>
-
-                  <button
-                    className={`circle-play-btn ${isPlaying ? 'playing' : ''}`}
-                    onClick={handleTogglePlay}
-                    title={isPlaying ? "Pausar (W)" : "Reproducir (W)"}
-                    style={{ marginLeft: '10px' }}
-                  >
-                    {isPlaying ? '⏸' : '▶'}
-                  </button>
-
-                  <div className="sub-text-block" style={{ marginLeft: '1.5rem' }}>
-                    {isEditingSub ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <input type="text" className="search-input" style={{ height: '36px', flex: 1, paddingLeft: '10px' }} value={editedTextEn} onChange={(e) => setEditedTextEn(e.target.value)} placeholder="English" />
-                          <input type="text" className="search-input" style={{ height: '36px', flex: 1, paddingLeft: '10px' }} value={editedTextEs} onChange={(e) => setEditedTextEs(e.target.value)} placeholder="Español" />
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', alignSelf: 'flex-end' }}>
-                          <button className="btn-3d btn-secondary" style={{ padding: '4px 12px', fontSize: '0.75rem' }} onClick={() => setIsEditingSub(false)}>Cancelar</button>
-                          <button className="btn-3d btn-primary" style={{ padding: '4px 12px', fontSize: '0.75rem' }} onClick={saveSubtitleEdits}>Guardar</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {activeSub ? (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                            <div style={{ textAlign: 'left' }}>
-                              <div className="subtitle-line primary-lang" style={{ justifyContent: 'flex-start' }}>
-                                {renderHoverableSentence(activeSub.en)}
-                              </div>
-                              <div className="subtitle-line secondary-lang" style={{ justifyContent: 'flex-start', marginTop: '4px' }}>
-                                {renderHoverableSentence(activeSub.es)}
-                              </div>
-                            </div>
-                            <button
-                              className="star-save-word-btn"
-                              title="Editar subtítulo"
-                              onClick={() => { setEditedTextEn(activeSub.en); setEditedTextEs(activeSub.es); setIsEditingSub(true); }}
-                              style={{ marginLeft: '12px' }}
-                            >✏️</button>
-                          </div>
-                        ) : (
-                          <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '1.05rem' }}>
-                            💡 Presiona ▶ para iniciar la sincronización de subtítulos.
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Voice synthesis notice ── */}
-            {playerType === 'local' && (
-              <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                🔊 <strong>Narrador en Tiempo Real:</strong> El navegador leerá los subtítulos en inglés en sincronía exacta con el video.
-              </div>
-            )}
-
-            {/* ══════════════════════════════════════════════════════════════
-                ADMIN TIMELINE EDITOR (solo visible en modo administrador)
-                Estilo Adobe Premiere / DaVinci Resolve
-            ══════════════════════════════════════════════════════════════ */}
-            {isAdminMode && (
+            
+            {/* Subtle hotkeys guide bar */}
+            {showHotkeysHelper && (
               <div style={{
-                marginTop: '20px',
-                backgroundColor: '#111827',
-                borderRadius: '16px',
-                border: '2px solid #374151',
-                overflow: 'hidden',
-                fontFamily: "'Inter', sans-serif",
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                textAlign: 'center',
+                fontSize: '0.75rem',
+                color: 'var(--text-secondary)',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1.5px solid var(--border)',
+                marginTop: '4px',
+                fontFamily: "'Inter', sans-serif"
               }}>
-                
-                {/* Admin Panel Header */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 20px',
-                  backgroundColor: '#0f172a',
-                  borderBottom: '1px solid #1f2937'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#818cf8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                      🔑 Editor de Línea de Tiempo — Modo Administrador
-                    </span>
-                    <span style={{ fontSize: '0.7rem', backgroundColor: '#1f2937', color: '#64748b', padding: '2px 8px', borderRadius: '9999px', border: '1px solid #374151' }}>
-                      {currentSubtitles.length} frases · {formatTime(currentSubtitles[currentSubtitles.length - 1]?.end || 0)} duración
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {/* Offset controls */}
-                    <button
-                      onClick={() => {
-                        const updated = currentSubtitles.map(s => ({
-                          ...s,
-                          start: Math.max(0, parseFloat((s.start - 0.5).toFixed(2))),
-                          end: Math.max(0.1, parseFloat((s.end - 0.5).toFixed(2)))
-                        }));
-                        saveAllSubtitles(updated);
-                      }}
-                      style={{ padding: '4px 12px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#1f2937', color: '#94a3b8', border: '1px solid #374151', borderRadius: '6px', cursor: 'pointer' }}
-                    >← −0.5s</button>
-                    <button
-                      onClick={() => {
-                        const updated = currentSubtitles.map(s => ({
-                          ...s,
-                          start: parseFloat((s.start + 0.5).toFixed(2)),
-                          end: parseFloat((s.end + 0.5).toFixed(2))
-                        }));
-                        saveAllSubtitles(updated);
-                      }}
-                      style={{ padding: '4px 12px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#1f2937', color: '#94a3b8', border: '1px solid #374151', borderRadius: '6px', cursor: 'pointer' }}
-                    >+0.5s →</button>
-                    <button
-                      onClick={() => {
-                        const newSub = {
-                          id: currentSubtitles.length + 1,
-                          start: parseFloat(currentTime.toFixed(2)),
-                          end: parseFloat((currentTime + 3).toFixed(2)),
-                          en: 'New subtitle text',
-                          es: 'Nuevo texto de subtítulo'
-                        };
-                        saveAllSubtitles([...currentSubtitles, newSub].sort((a, b) => a.start - b.start));
-                      }}
-                      style={{ padding: '4px 12px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#4f46e5', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                    >+ Agregar aquí</button>
-                  </div>
-                </div>
-
-                {/* Timeline Ruler */}
-                <div style={{ position: 'relative', backgroundColor: '#0f172a', padding: '0 20px' }}>
-                  {/* Time ruler marks */}
-                  <div style={{ display: 'flex', height: '20px', borderBottom: '1px solid #1f2937', position: 'relative', overflow: 'hidden' }}>
-                    {Array.from({ length: Math.ceil((videoDuration || 120) / 10) + 1 }, (_, i) => {
-                      const t = i * 10;
-                      const totalDur = currentSubtitles[currentSubtitles.length - 1]?.end || videoDuration || 120;
-                      const pct = (t / totalDur) * 100;
-                      return (
-                        <div key={t} style={{
-                          position: 'absolute',
-                          left: `${pct}%`,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center'
-                        }}>
-                          <div style={{ width: '1px', height: '8px', backgroundColor: '#374151' }} />
-                          <span style={{ fontSize: '0.6rem', color: '#64748b', whiteSpace: 'nowrap', marginTop: '1px' }}>{formatTime(t)}</span>
-                        </div>
-                      );
-                    })}
-                    {/* Playhead */}
-                    {videoDuration > 0 && (
-                      <div style={{
-                        position: 'absolute',
-                        left: `${(currentTime / (currentSubtitles[currentSubtitles.length - 1]?.end || videoDuration)) * 100}%`,
-                        top: 0,
-                        bottom: 0,
-                        width: '2px',
-                        backgroundColor: '#ef4444',
-                        zIndex: 20,
-                        pointerEvents: 'none'
-                      }} />
-                    )}
-                  </div>
-                </div>
-
-                {/* Track Area */}
-                <div style={{
-                  position: 'relative',
-                  padding: '12px 20px',
-                  minHeight: '120px',
-                  backgroundColor: '#111827',
-                  overflowX: 'auto',
-                  overflowY: 'hidden'
-                }}>
-                  {/* Track label */}
-                  <div style={{
-                    position: 'absolute',
-                    left: '20px',
-                    top: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    zIndex: 5
-                  }}>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em', backgroundColor: '#1e1b4b', padding: '2px 6px', borderRadius: '4px' }}>SUBTÍTULOS</span>
-                  </div>
-
-                  {/* Track timeline clips */}
-                  <div style={{ position: 'relative', height: '80px', marginTop: '28px' }}>
-                    {/* Background grid lines */}
-                    {Array.from({ length: Math.ceil((videoDuration || 120) / 10) + 1 }, (_, i) => {
-                      const t = i * 10;
-                      const totalDur = currentSubtitles[currentSubtitles.length - 1]?.end || videoDuration || 120;
-                      const pct = (t / totalDur) * 100;
-                      return (
-                        <div key={t} style={{
-                          position: 'absolute',
-                          left: `${pct}%`,
-                          top: 0,
-                          bottom: 0,
-                          width: '1px',
-                          backgroundColor: '#1f2937',
-                          pointerEvents: 'none'
-                        }} />
-                      );
-                    })}
-
-                    {/* Playhead on track */}
-                    {videoDuration > 0 && (
-                      <div style={{
-                        position: 'absolute',
-                        left: `${(currentTime / (currentSubtitles[currentSubtitles.length - 1]?.end || videoDuration)) * 100}%`,
-                        top: 0,
-                        bottom: 0,
-                        width: '2px',
-                        backgroundColor: '#ef4444',
-                        zIndex: 20,
-                        pointerEvents: 'none'
-                      }}>
-                        {/* Playhead triangle */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '-8px',
-                          left: '-5px',
-                          width: 0,
-                          height: 0,
-                          borderLeft: '5px solid transparent',
-                          borderRight: '5px solid transparent',
-                          borderTop: '8px solid #ef4444'
-                        }} />
-                      </div>
-                    )}
-
-                    {/* Subtitle clips */}
-                    {currentSubtitles.map((sub, idx) => {
-                      const totalDur = currentSubtitles[currentSubtitles.length - 1]?.end || videoDuration || 120;
-                      const leftPct = (sub.start / totalDur) * 100;
-                      const widthPct = ((sub.end - sub.start) / totalDur) * 100;
-                      const isActive = currentTime >= sub.start && currentTime <= sub.end;
-                      const isEditing = isEditingSub && activeSub?.id === sub.id;
-
-                      return (
-                        <div
-                          key={sub.id}
-                          onClick={() => handleSeek(sub.start)}
-                          style={{
-                            position: 'absolute',
-                            left: `${leftPct}%`,
-                            width: `max(${widthPct}%, 30px)`,
-                            top: '8px',
-                            height: '56px',
-                            backgroundColor: isActive ? '#4338ca' : isEditing ? '#7c3aed' : '#1e3a8a',
-                            border: `2px solid ${isActive ? '#818cf8' : isEditing ? '#a78bfa' : '#3b4fd8'}`,
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            overflow: 'hidden',
-                            transition: 'background-color 0.15s',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            padding: '4px 6px',
-                            gap: '2px',
-                            boxSizing: 'border-box',
-                            boxShadow: isActive ? '0 0 10px rgba(129,140,248,0.5)' : 'none'
-                          }}
-                          title={`#${sub.id}: ${sub.en}\n${sub.start}s → ${sub.end}s`}
-                        >
-                          {/* Clip header */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.55rem', fontWeight: 800, color: '#a5b4fc', whiteSpace: 'nowrap' }}>#{sub.id}</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditedTextEn(sub.en);
-                                setEditedTextEs(sub.es);
-                                editingSubIdRef.current = sub.id;
-                                setIsEditingSub(true);
-                                handleSeek(sub.start);
-                              }}
-                              style={{ background: 'none', border: 'none', color: '#a5b4fc', fontSize: '0.6rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}
-                            >✏️</button>
-                          </div>
-                          {/* Clip EN text */}
-                          <div style={{ fontSize: '0.6rem', color: '#e0e7ff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', lineHeight: '1.2' }}>
-                            {sub.en}
-                          </div>
-                          {/* Time stamp */}
-                          <div style={{ fontSize: '0.5rem', color: '#6366f1', marginTop: 'auto', whiteSpace: 'nowrap' }}>
-                            {formatTime(sub.start)} → {formatTime(sub.end)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Active clip inline editor (at bottom of timeline) */}
-                {isEditingSub && editingSubIdRef.current && (() => {
-                  const editSub = currentSubtitles.find(s => s.id === editingSubIdRef.current);
-                  if (!editSub) return null;
-                  return (
-                  <div style={{
-                    backgroundColor: '#0f172a',
-                    borderTop: '1px solid #1f2937',
-                    padding: '12px 20px',
-                    display: 'flex',
-                    gap: '12px',
-                    alignItems: 'center',
-                    flexWrap: 'wrap'
-                  }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#818cf8', whiteSpace: 'nowrap' }}>
-                      ✏️ Clip #{activeSub.id}
-                    </span>
-                    <div style={{ display: 'flex', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
-                      <input
-                        type="text"
-                        value={editedTextEn}
-                        onChange={(e) => setEditedTextEn(e.target.value)}
-                        placeholder="English text..."
-                        style={{ flex: 1, minWidth: '160px', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#1f2937', color: '#e2e8f0', border: '1px solid #374151', fontSize: '0.8rem', outline: 'none' }}
-                      />
-                      <input
-                        type="text"
-                        value={editedTextEs}
-                        onChange={(e) => setEditedTextEs(e.target.value)}
-                        placeholder="Texto en español..."
-                        style={{ flex: 1, minWidth: '160px', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#1f2937', color: '#e2e8f0', border: '1px solid #374151', fontSize: '0.8rem', outline: 'none' }}
-                      />
-                      <input
-                        type="number"
-                        value={editSub.start}
-                        step="0.1"
-                        onChange={(e) => {
-                          const newStart = parseFloat(e.target.value);
-                          const updated = currentSubtitles.map(s => s.id === editSub.id ? { ...s, start: newStart } : s);
-                          saveAllSubtitles(updated);
-                        }}
-                        style={{ width: '80px', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#1f2937', color: '#fbbf24', border: '1px solid #374151', fontSize: '0.75rem', outline: 'none' }}
-                        title="Inicio (segundos)"
-                      />
-                      <span style={{ color: '#64748b', alignSelf: 'center', fontSize: '0.75rem' }}>→</span>
-                      <input
-                        type="number"
-                        value={editSub.end}
-                        step="0.1"
-                        onChange={(e) => {
-                          const newEnd = parseFloat(e.target.value);
-                          const updated = currentSubtitles.map(s => s.id === editSub.id ? { ...s, end: newEnd } : s);
-                          saveAllSubtitles(updated);
-                        }}
-                        style={{ width: '80px', padding: '6px 8px', borderRadius: '6px', backgroundColor: '#1f2937', color: '#fbbf24', border: '1px solid #374151', fontSize: '0.75rem', outline: 'none' }}
-                        title="Fin (segundos)"
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => {
-                          const updated = currentSubtitles.filter(s => s.id !== editSub.id);
-                          saveAllSubtitles(updated);
-                          setIsEditingSub(false);
-                          editingSubIdRef.current = null;
-                        }}
-                        style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#450a0a', color: '#fca5a5', border: '1px solid #7f1d1d', borderRadius: '6px', cursor: 'pointer' }}
-                      >🗑 Eliminar</button>
-                      <button onClick={() => { setIsEditingSub(false); editingSubIdRef.current = null; }} style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: '#1f2937', color: '#94a3b8', border: '1px solid #374151', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
-                      <button onClick={saveSubtitleEdits} style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#4f46e5', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>✔ Guardar</button>
-                    </div>
-                  </div>
-                  );
-                })()}
-
-                {/* Admin footer hint */}
-                <div style={{ padding: '6px 20px', backgroundColor: '#0f172a', borderTop: '1px solid #1f2937' }}>
-                  <span style={{ fontSize: '0.65rem', color: '#475569' }}>
-                    💡 Haz clic en un clip para saltar a esa frase · Edita start/end en segundos · Los cambios se guardan automáticamente en el navegador
-                  </span>
-                </div>
+                ⌨️ <strong>Atajos:</strong> [W] Play/Pausa · [A] Frase anterior · [S] Repetir frase · [D] Siguiente frase · [Q] Alternar Auto-Pausa (AP)
               </div>
             )}
           </div>
 
-
-
-
-          {/* Right Side: Transcript Sidebar Panel */}
-          <div className="transcript-sidebar">
-            <div className="transcript-tabs" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)' }}>
+          {/* Right Side: Transcript Sidebar Panel (Language Reactor Style) */}
+          <div className="transcript-sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+            {/* Sidebar Tab Header */}
+            <div className="transcript-tabs" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', flexShrink: 0 }}>
               <div style={{ display: 'flex', flexGrow: 1 }}>
                 <button
-                  className={`transcript-tab-btn ${activeTab === 'TEXTO' ? 'active' : ''}`}
+                  className={`transcript-tab-btn ${activeTab === 'SUBTÍTULOS' ? 'active' : ''}`}
                   onClick={() => {
-                    setActiveTab('TEXTO');
+                    setActiveTab('SUBTÍTULOS');
                     sounds.playCorrect();
                   }}
-                  style={{ flex: 'none', padding: '12px 20px' }}
+                  style={{ flex: 1, padding: '12px 10px', fontSize: '0.8rem', fontWeight: 700 }}
                 >
-                  TEXTO
+                  Subtítulos
                 </button>
                 <button
                   className={`transcript-tab-btn ${activeTab === 'PALABRAS' ? 'active' : ''}`}
@@ -2350,26 +2078,26 @@ export default function ReactorView() {
                     setActiveTab('PALABRAS');
                     sounds.playCorrect();
                   }}
-                  style={{ flex: 'none', padding: '12px 20px' }}
+                  style={{ flex: 1, padding: '12px 10px', fontSize: '0.8rem', fontWeight: 700 }}
                 >
-                  PALABRAS ({savedWords.length})
+                  Palabras
                 </button>
                 <button
-                  className={`transcript-tab-btn ${activeTab === 'EDITOR' ? 'active' : ''}`}
+                  className={`transcript-tab-btn ${activeTab === 'GUARDADO' ? 'active' : ''}`}
                   onClick={() => {
-                    setActiveTab('EDITOR');
+                    setActiveTab('GUARDADO');
                     sounds.playCorrect();
                   }}
-                  style={{ flex: 'none', padding: '12px 20px' }}
+                  style={{ flex: 1, padding: '12px 10px', fontSize: '0.8rem', fontWeight: 700 }}
                 >
-                  ⚙️ EDITOR
+                  Guardado ({savedWords.length})
                 </button>
               </div>
-              <span style={{ paddingRight: '20px', cursor: 'pointer', opacity: 0.5 }} title="Buscar en transcripción">🔍</span>
             </div>
 
-            <div className="transcript-content-area" style={{ padding: '0.5rem' }}>
-              {activeTab === 'TEXTO' && (
+            {/* Sidebar content area */}
+            <div className="transcript-content-area" style={{ flexGrow: 1, overflowY: 'auto', padding: '0.5rem', minHeight: 0 }}>
+              {activeTab === 'SUBTÍTULOS' && (
                 currentSubtitles.map((sub) => {
                   const isActive = currentTime >= sub.start && currentTime <= sub.end;
                   return (
@@ -2378,36 +2106,40 @@ export default function ReactorView() {
                       ref={isActive ? activeItemRef : null}
                       className={`transcript-line-item ${isActive ? 'active' : ''}`}
                       onClick={() => handleSeek(sub.start)}
-                      style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}
+                      style={{ 
+                        padding: '10px 14px', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '4px',
+                        alignItems: 'stretch',
+                        borderRadius: '10px',
+                        marginBottom: '8px',
+                        border: isActive ? '1.5px solid var(--primary)' : '1.5px solid var(--border)',
+                        backgroundColor: isActive ? 'rgba(79, 70, 229, 0.05)' : '#ffffff',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
                     >
-                      <div style={{ width: '16px', display: 'flex', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {isActive && (
-                          <span style={{ color: 'var(--primary)', fontSize: '0.8rem' }}>▶</span>
+                          <span style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>▶</span>
                         )}
-                      </div>
-
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '1.5rem',
-                        width: '100%',
-                        fontFamily: "'Inter', sans-serif"
-                      }}>
                         <span style={{
                           fontSize: '0.85rem',
-                          fontWeight: isActive ? 700 : 500,
-                          color: isActive ? 'var(--primary)' : 'var(--text-primary)',
-                          lineHeight: '1.4'
+                          fontWeight: 700,
+                          color: 'var(--primary)',
+                          fontFamily: "'Outfit', sans-serif"
                         }}>
                           {sub.en}
                         </span>
-                        <span style={{
-                          fontSize: '0.85rem',
-                          color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                          lineHeight: '1.4'
-                        }}>
-                          {sub.es}
-                        </span>
+                      </div>
+                      <div style={{
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)',
+                        fontFamily: "'Inter', sans-serif",
+                        paddingLeft: isActive ? '1rem' : '0'
+                      }}>
+                        {sub.es}
                       </div>
                     </div>
                   );
@@ -2416,237 +2148,79 @@ export default function ReactorView() {
 
               {activeTab === 'PALABRAS' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, padding: '4px 8px', color: 'var(--primary)' }}>PALABRAS GUARDADAS</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, padding: '4px 8px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vocabulario Clave del Video</div>
+                  {Object.keys(currentDictionary || {}).length > 0 ? (
+                    Object.keys(currentDictionary || {})
+                      .slice(0, 15)
+                      .map((key) => {
+                        const item = currentDictionary[key];
+                        return (
+                          <div key={key} className="saved-word-item" style={{ backgroundColor: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '10px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <span style={{ color: 'var(--primary)', fontWeight: 700, textTransform: 'capitalize' }}>{key}</span>
+                              <span style={{ fontSize: '0.65rem', opacity: 0.5, marginLeft: '8px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-secondary)' }}>({item.category})</span>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500, marginTop: '2px' }}>
+                                {item.translation}
+                              </div>
+                            </div>
+                            <button
+                              className={`star-save-word-btn ${savedWords.some(w => w.key === key) ? 'saved' : ''}`}
+                              onClick={() => toggleSaveWord(key, item)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: savedWords.some(w => w.key === key) ? '#fbbf24' : '#cbd5e1' }}
+                            >
+                              ★
+                            </button>
+                          </div>
+                        );
+                      })
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      Pasa el mouse sobre las palabras del video para traducirlas y verlas aquí.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'GUARDADO' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, padding: '4px 8px', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Palabras Guardadas del Estudiante</div>
                   {savedWords.length > 0 ? (
                     savedWords.map((word) => (
-                      <div key={word.key} className="saved-word-item">
+                      <div key={word.key} className="saved-word-item" style={{ backgroundColor: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: '10px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                          <span style={{ color: '#fbbf24', textTransform: 'capitalize' }}>{word.key}</span>
-                          <span style={{ fontSize: '0.7rem', opacity: 0.5, marginLeft: '8px' }}>({word.category})</span>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                          <span style={{ color: '#16a34a', fontWeight: 700, textTransform: 'capitalize' }}>{word.key}</span>
+                          <span style={{ fontSize: '0.65rem', opacity: 0.5, marginLeft: '8px', textTransform: 'uppercase', fontWeight: 700, color: '#16a34a' }}>({word.category})</span>
+                          <div style={{ fontSize: '0.8rem', color: '#14532d', fontWeight: 500, marginTop: '2px' }}>
                             {word.translation}
                           </div>
                         </div>
                         <button
                           className="star-save-word-btn saved"
                           onClick={() => toggleSaveWord(word.key, word)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}
+                          title="Eliminar palabra"
                         >
                           🗑️
                         </button>
                       </div>
                     ))
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      No tienes palabras guardadas todavía.
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      No tienes palabras guardadas todavía. Haz clic en la ★ de cualquier traducción para guardarla.
                     </div>
                   )}
-
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, padding: '4px 8px', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '12px' }}>VOCABULARIO CLAVE</div>
-                  {Object.keys(currentDictionary || {})
-                    .slice(0, 8)
-                    .map((key) => {
-                      const item = currentDictionary[key];
-                      return (
-                        <div key={key} className="saved-word-item">
-                          <div>
-                            <span style={{ color: 'var(--primary)', textTransform: 'capitalize' }}>{key}</span>
-                            <span style={{ fontSize: '0.7rem', opacity: 0.5, marginLeft: '8px' }}>({item.category})</span>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                              {item.translation}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-
-              {activeTab === 'EDITOR' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem', fontFamily: "'Inter', sans-serif" }}>
-                  
-                  {/* Global synchronization offset controls */}
-                  <div style={{
-                    backgroundColor: '#f8fafc',
-                    border: '1.5px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '0.75rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
-                  }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary)' }}>🕒 Sincronización Global (Offset)</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Desplaza todas las marcas de tiempo de los subtítulos de una sola vez:</div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <button 
-                        className="btn-3d btn-secondary" 
-                        style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1 }}
-                        onClick={() => {
-                          const updated = currentSubtitles.map(s => ({
-                            ...s,
-                            start: Math.max(0, parseFloat((s.start - 0.5).toFixed(2))),
-                            end: Math.max(0.1, parseFloat((s.end - 0.5).toFixed(2)))
-                          }));
-                          saveAllSubtitles(updated);
-                          sounds.playCorrect();
-                        }}
-                      >
-                        -0.5s ⏪
-                      </button>
-                      <button 
-                        className="btn-3d btn-secondary" 
-                        style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1 }}
-                        onClick={() => {
-                          const updated = currentSubtitles.map(s => ({
-                            ...s,
-                            start: parseFloat((s.start + 0.5).toFixed(2)),
-                            end: parseFloat((s.end + 0.5).toFixed(2))
-                          }));
-                          saveAllSubtitles(updated);
-                          sounds.playCorrect();
-                        }}
-                      >
-                        +0.5s ⏩
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Add new subtitle button */}
-                  <button 
-                    className="btn-3d btn-primary"
-                    style={{ padding: '10px 16px', fontSize: '0.8rem', fontWeight: 700, width: '100%' }}
-                    onClick={() => {
-                      const newId = currentSubtitles.length > 0 ? Math.max(...currentSubtitles.map(s => s.id)) + 1 : 1;
-                      const roundedTime = parseFloat(currentTime.toFixed(2));
-                      const newSub = {
-                        id: newId,
-                        start: roundedTime,
-                        end: roundedTime + 4,
-                        en: 'New subtitle text...',
-                        es: 'Nuevo texto de subtítulo...'
-                      };
-                      const updated = [...currentSubtitles, newSub].sort((a, b) => a.start - b.start);
-                      saveAllSubtitles(updated);
-                      sounds.playCorrect();
-                    }}
-                  >
-                    ➕ Añadir Frase en este Segundo ({currentTime.toFixed(1)}s)
-                  </button>
-
-                  <div style={{ height: '1.5px', backgroundColor: 'var(--border)', margin: '4px 0' }}></div>
-
-                  {/* Subtitle list grid */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
-                    {currentSubtitles.map((sub, idx) => (
-                      <div 
-                        key={sub.id} 
-                        style={{
-                          border: '1.5px solid var(--border)',
-                          borderRadius: '12px',
-                          padding: '0.75rem',
-                          backgroundColor: currentTime >= sub.start && currentTime <= sub.end ? '#f5f3ff' : '#ffffff',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>Frase #{idx + 1}</span>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button 
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
-                              onClick={() => handleSeek(sub.start)}
-                              title="Reproducir desde aquí"
-                            >
-                              ▶️
-                            </button>
-                            <button 
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
-                              onClick={() => {
-                                const updated = currentSubtitles.filter(s => s.id !== sub.id);
-                                saveAllSubtitles(updated);
-                                sounds.playCorrect();
-                              }}
-                              title="Eliminar frase"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Timing inputs */}
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '2px' }}>
-                            <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>Inicio (s)</span>
-                            <input 
-                              type="number" 
-                              step="0.1"
-                              value={sub.start} 
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                const updated = currentSubtitles.map(s => s.id === sub.id ? { ...s, start: val } : s);
-                                saveAllSubtitles(updated);
-                              }}
-                              style={{ width: '100%', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.75rem' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '2px' }}>
-                            <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>Fin (s)</span>
-                            <input 
-                              type="number" 
-                              step="0.1"
-                              value={sub.end} 
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                const updated = currentSubtitles.map(s => s.id === sub.id ? { ...s, end: val } : s);
-                                saveAllSubtitles(updated);
-                              }}
-                              style={{ width: '100%', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.75rem' }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* English input */}
-                        <input 
-                          type="text" 
-                          value={sub.en} 
-                          onChange={(e) => {
-                            const updated = currentSubtitles.map(s => s.id === sub.id ? { ...s, en: e.target.value } : s);
-                            saveAllSubtitles(updated);
-                          }}
-                          placeholder="Inglés"
-                          style={{ width: '100%', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.75rem' }}
-                        />
-
-                        {/* Spanish input */}
-                        <input 
-                          type="text" 
-                          value={sub.es} 
-                          onChange={(e) => {
-                            const updated = currentSubtitles.map(s => s.id === sub.id ? { ...s, es: e.target.value } : s);
-                            saveAllSubtitles(updated);
-                          }}
-                          placeholder="Español"
-                          style={{ width: '100%', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.75rem' }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    💾 Los cambios se guardan automáticamente en tu navegador.
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* ── Mascot pinned at bottom of sidebar (zona verde) ── */}
+            {/* Mascot footer inside transcript sidebar (zona verde) */}
             <div style={{
-              borderTop: '1px solid var(--border)',
-              padding: '12px 16px',
-              backgroundColor: 'var(--surface)',
+              borderTop: '1.5px solid var(--border)',
+              padding: '10px 14px',
+              backgroundColor: '#f8fafc',
               flexShrink: 0
             }}>
-              <Mascot mood="happy" text={playerType === 'local' ? "¡Leo los subtítulos en voz alta en tiempo real!" : "¡Pasa el ratón sobre cualquier palabra en inglés para ver su significado!"} />
+              <Mascot mood="happy" text={playerType === 'local' ? "¡Leo los subtítulos en inglés en voz alta en tiempo real!" : "¡Pasa el mouse sobre las palabras en la pantalla para ver su significado e interactuar!"} />
             </div>
           </div>
         </div>
@@ -2655,198 +2229,110 @@ export default function ReactorView() {
   };
 
   return (
-    <div className="view-container" style={{ position: 'relative' }}>
+    <div 
+      className="view-container" 
+      style={{ 
+        position: 'relative',
+        maxWidth: currentView === 'player' ? '100%' : '1350px',
+        padding: currentView === 'player' ? '1rem 2rem' : '2rem'
+      }}
+    >
       
-      {/* ═══════════════════════════════════════════════════
-          TV BROADCAST INTRO OVERLAY
-          ═══════════════════════════════════════════════════ */}
+      {/* Intro Overlay — Minimalist TV style */}
       {introActive && (
         <div className={`cinema-intro-overlay ${introFade ? 'fade-out' : ''}`}
-          style={{ fontFamily: "'Outfit', sans-serif", overflow: 'hidden' }}
+          style={{ fontFamily: "'Outfit', sans-serif", overflow: 'hidden', backgroundColor: '#06060e' }}
         >
-          {/* CRT Scan Lines overlay */}
+          {/* Subtle CRT scan lines — very faint */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
-            backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 3px)',
-            backgroundSize: '100% 3px'
+            backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, transparent 1px, transparent 4px)',
           }} />
 
-          {/* CRT Vignette */}
+          {/* Soft vignette */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
-            background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%)'
+            background: 'radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%)'
           }} />
 
-          {/* Static noise flicker top stripe */}
-          <div className="tv-static-stripe" style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: '4px', zIndex: 5,
-            background: 'linear-gradient(90deg, #fff 0%, #aaa 20%, #fff 40%, #666 60%, #fff 80%, #aaa 100%)',
-            opacity: 0.15, animation: 'tvStaticMove 0.08s steps(1) infinite'
-          }} />
-
-          {/* Phase 1 — TV Color Bars (shown for first ~1.5s via loaderProgress) */}
-          {loaderProgress < 35 && (
+          {/* Brief static flash (only while loading < 30%) */}
+          {loaderProgress < 30 && (
             <div style={{
-              position: 'absolute', inset: 0, zIndex: 1,
-              display: 'flex', flexDirection: 'column'
-            }}>
-              {/* Top 75%: Classic SMPTE color bars */}
-              <div style={{ flex: '0 0 75%', display: 'flex' }}>
-                {[
-                  { color: '#c0c0c0', label: 'W' },
-                  { color: '#c0c000', label: 'Y' },
-                  { color: '#00c0c0', label: 'C' },
-                  { color: '#00c000', label: 'G' },
-                  { color: '#c000c0', label: 'M' },
-                  { color: '#c00000', label: 'R' },
-                  { color: '#0000c0', label: 'B' },
-                ].map((bar, i) => (
-                  <div key={i} style={{
-                    flex: 1, backgroundColor: bar.color,
-                    display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                    paddingBottom: '6px'
-                  }}>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(0,0,0,0.4)', letterSpacing: '0.05em' }}>{bar.label}</span>
-                  </div>
-                ))}
-              </div>
-              {/* Bottom 25%: Blue/Black/Magenta stripe */}
-              <div style={{ flex: '0 0 25%', display: 'flex' }}>
-                {['#00008b', '#101010', '#9b00c4', '#101010', '#c0c0c0', '#101010', '#0000c0'].map((c, i) => (
-                  <div key={i} style={{ flex: 1, backgroundColor: c }} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Phase 2 — Black screen with TV noise (35-60%) */}
-          {loaderProgress >= 35 && loaderProgress < 60 && (
-            <div className="tv-noise-bg" style={{
               position: 'absolute', inset: 0, zIndex: 1,
               backgroundColor: '#050505',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E")`,
-              backgroundSize: '200px 200px',
-              animation: 'tvNoiseShift 0.1s steps(2) infinite'
-            }}>
-              {/* "NO SIGNAL" text */}
-              <div style={{
-                position: 'absolute', inset: 0, display: 'flex',
-                flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px'
-              }}>
-                <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.3em', textShadow: '0 0 20px rgba(255,255,255,0.5)', animation: 'tvBlink 0.6s step-start infinite' }}>
-                  ◼ NO SIGNAL
-                </span>
-                <span style={{ fontSize: '0.7rem', color: '#888', letterSpacing: '0.2em' }}>AV-1 / CH.04</span>
-              </div>
-            </div>
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 150 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.15'/%3E%3C/svg%3E")`,
+              backgroundSize: '150px 150px',
+              animation: 'tvNoiseShift 0.12s steps(2) infinite'
+            }} />
           )}
 
-          {/* Phase 3 — Logo Reveal (60%+) */}
-          {loaderProgress >= 60 && (
+          {/* Logo reveal (30%+) */}
+          {loaderProgress >= 30 && (
             <div style={{
               position: 'absolute', inset: 0, zIndex: 1,
-              backgroundColor: '#000008',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '32px'
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: '28px',
+              animation: 'logoFadeIn 0.6s ease forwards'
             }}>
-
-              {/* Channel badge top-right */}
+              {/* Red live dot — top left, very small */}
               <div style={{
-                position: 'absolute', top: '28px', right: '36px',
-                display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px'
+                position: 'absolute', top: '24px', left: '28px',
+                display: 'flex', gap: '6px', alignItems: 'center'
               }}>
                 <div style={{
-                  border: '2px solid rgba(79,70,229,0.8)', borderRadius: '6px',
-                  padding: '3px 10px', color: '#818cf8', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.15em'
-                }}>CH. 04</div>
-                <span style={{ fontSize: '0.55rem', color: '#475569', letterSpacing: '0.1em' }}>MENTORA BROADCAST</span>
-              </div>
-
-              {/* Broadcast timestamp top-left */}
-              <div style={{
-                position: 'absolute', top: '28px', left: '36px',
-                display: 'flex', gap: '8px', alignItems: 'center'
-              }}>
-                <div style={{
-                  width: '8px', height: '8px', borderRadius: '50%',
-                  backgroundColor: '#ef4444',
-                  boxShadow: '0 0 10px #ef4444',
-                  animation: 'tvBlink 1s ease infinite'
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  backgroundColor: '#ef4444', boxShadow: '0 0 6px #ef4444',
+                  animation: 'tvBlink 1.2s ease infinite'
                 }} />
-                <span style={{ fontSize: '0.65rem', color: '#64748b', letterSpacing: '0.1em', fontWeight: 600 }}>EN VIVO · HD</span>
+                <span style={{ fontSize: '0.58rem', color: '#475569', letterSpacing: '0.12em', fontWeight: 600 }}>EN VIVO</span>
               </div>
 
-              {/* Main logo with CRT glow */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', animation: 'logoFadeIn 0.8s ease forwards' }}>
-                <div style={{ position: 'relative' }}>
-                  {/* Horizontal scanline on logo */}
-                  <div className="tv-logo-scanline" style={{
-                    position: 'absolute', top: 0, left: '-10%', width: '120%', height: '3px',
-                    background: 'linear-gradient(90deg, transparent, rgba(129,140,248,0.9), transparent)',
-                    animation: 'tvScanlineMove 2s linear infinite', zIndex: 2
-                  }} />
-                  <img
-                    src="/assets/logo.png"
-                    alt="Mentora"
-                    style={{
-                      height: '80px', width: 'auto', objectFit: 'contain', display: 'block',
-                      filter: 'drop-shadow(0 0 30px rgba(79,70,229,0.9)) drop-shadow(0 0 8px rgba(14,165,233,0.6)) brightness(1.1)',
-                    }}
-                  />
-                </div>
+              {/* Logo */}
+              <img
+                src="/assets/logo.png"
+                alt="Mentora"
+                style={{
+                  height: '68px', width: 'auto', objectFit: 'contain',
+                  filter: 'drop-shadow(0 0 20px rgba(79,70,229,0.65)) brightness(1.05)',
+                }}
+              />
 
-                <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#4f46e5', letterSpacing: '0.4em', fontWeight: 700, textTransform: 'uppercase' }}>
-                    ─── PRESENTA ───
-                  </span>
-                  <span style={{ fontSize: '1.1rem', color: '#e2e8f0', fontWeight: 600, letterSpacing: '0.05em' }}>
-                    Cine Reactor
-                  </span>
-                  <span style={{ fontSize: '0.65rem', color: '#475569', letterSpacing: '0.2em' }}>
-                    Aprende inglés · Temporada 1
-                  </span>
-                </div>
-              </div>
-
-              {/* Bottom broadcast bar */}
-              <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                height: '48px',
-                background: 'linear-gradient(90deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
-                borderTop: '1px solid #1e3a8a',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0 32px'
+              {/* Tagline */}
+              <span style={{
+                fontSize: '0.7rem', color: '#334155',
+                letterSpacing: '0.3em', fontWeight: 500,
+                textTransform: 'uppercase'
               }}>
-                <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.6rem', color: '#4f46e5', fontWeight: 800, letterSpacing: '0.15em' }}>MENTORA TV</span>
-                  <span style={{ fontSize: '0.6rem', color: '#334155', letterSpacing: '0.08em' }}>INGLÉS · SUBTÍTULOS BILINGÜE · HD 1080p</span>
-                </div>
-                {/* Progress bar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '120px', height: '2px', backgroundColor: '#1e3a8a', borderRadius: '9999px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${Math.min(((loaderProgress - 60) / 40) * 100, 100)}%`, backgroundColor: '#4f46e5', transition: 'width 0.05s linear' }} />
-                  </div>
-                  <span style={{ fontSize: '0.55rem', color: '#475569', fontWeight: 600 }}>CARGANDO</span>
-                </div>
+                Aprende inglés con cine
+              </span>
+
+              {/* Thin progress bar */}
+              <div style={{ width: '140px', height: '2px', backgroundColor: '#1e293b', borderRadius: '9999px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(((loaderProgress - 30) / 70) * 100, 100)}%`,
+                  backgroundColor: '#4f46e5',
+                  transition: 'width 0.05s linear',
+                  borderRadius: '9999px'
+                }} />
               </div>
             </div>
           )}
 
-          {/* Skip button */}
+          {/* Skip button — subtle */}
           <button
             onClick={() => { setIntroActive(false); sounds.playCompleted(); }}
             style={{
-              position: 'absolute', bottom: '64px', right: '32px',
-              background: 'rgba(15,23,42,0.8)',
-              border: '1px solid rgba(79,70,229,0.5)',
-              borderRadius: '6px',
-              color: '#94a3b8', padding: '6px 16px', fontSize: '0.75rem', cursor: 'pointer',
-              zIndex: 100, letterSpacing: '0.1em', fontFamily: "'Outfit', sans-serif",
-              transition: 'all 0.2s', backdropFilter: 'blur(4px)'
+              position: 'absolute', bottom: '28px', right: '28px',
+              background: 'none', border: 'none',
+              color: '#334155', padding: '4px 10px', fontSize: '0.7rem',
+              cursor: 'pointer', zIndex: 100, letterSpacing: '0.08em',
+              fontFamily: "'Outfit', sans-serif", transition: 'color 0.2s'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.borderColor = '#4f46e5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(79,70,229,0.5)'; }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#94a3b8'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#334155'}
           >
-            SALTAR ⏭
+            saltar ›
           </button>
         </div>
       )}
@@ -2855,7 +2341,8 @@ export default function ReactorView() {
       {currentView === 'catalog' ? renderCatalogLobby() : renderInteractivePlayer()}
 
       {/* --- Landing page features section (Shared footer) --- */}
-      <div style={{
+      {currentView === 'catalog' && (
+        <div style={{
         marginTop: '3.5rem',
         textAlign: 'center',
         padding: '3rem 2rem',
@@ -2964,10 +2451,11 @@ export default function ReactorView() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Floating WhatsApp Button */}
       <a 
-        href="https://wa.me/#" 
+        href="https://wa.me/51900000000?text=Hola%20Mentora!%20Me%20gustaría%20saber%20más%20sobre%20los%20planes%20y%20lecciones%20de%20inglés." 
         target="_blank" 
         rel="noopener noreferrer"
         style={{
@@ -2994,132 +2482,6 @@ export default function ReactorView() {
           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.458L0 24zm6.59-4.846c1.62.962 3.21 1.463 4.957 1.464 5.389 0 9.774-4.382 9.777-9.769.002-2.61-1.002-5.066-2.827-6.892C16.677 2.13 14.228.99 11.62.99a9.77 9.77 0 0 0-9.768 9.77c-.001 1.83.499 3.491 1.482 5.111L2.33 21.57l6.317-1.656zm12.188-6.186c-.269-.134-1.595-.788-1.842-.878-.247-.09-.427-.134-.607.134-.18.269-.696.878-.853 1.057-.157.18-.314.202-.583.067-1.161-.58-1.921-.967-2.678-2.267-.201-.346-.201-.646-.067-.781.12-.121.269-.314.404-.471.135-.157.18-.269.269-.449.09-.18.045-.337-.022-.471-.067-.134-.607-1.459-.831-1.997-.219-.526-.44-.455-.607-.463-.157-.008-.337-.01-.517-.01a1.002 1.002 0 0 0-.719.337c-.247.269-.943.921-.943 2.246s.965 2.605 1.1 2.785c.134.18 1.9 2.901 4.6 4.067.643.277 1.144.443 1.536.568.647.206 1.236.177 1.701.108.518-.077 1.595-.651 1.819-1.28.224-.63.224-1.169.157-1.28-.067-.113-.247-.18-.517-.313z"/>
         </svg>
       </a>
-
-      {/* --- AI Auto-Subtitles Modal --- */}
-      {showModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(11, 15, 25, 0.85)',
-          backdropFilter: 'blur(8px)',
-          zIndex: 2000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div style={{
-            background: 'var(--bg-card)',
-            border: '2px solid var(--border)',
-            borderRadius: '24px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.2rem',
-            animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-          }}>
-            {!transcribing ? (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Generador de Subtítulos con IA</h3>
-                  <button 
-                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}
-                    onClick={() => setShowModal(false)}
-                  >
-                    ✕
-                  </button>
-                </div>
-                
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.4' }}>
-                  Sube un archivo de video desde tu computadora o introduce un enlace de YouTube para procesar sus subtítulos en tiempo real.
-                </p>
-
-                {/* FILE UPLOAD SECTION */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary)' }}>Opción A: Subir Archivo Local (.mp4, .webm)</label>
-                  <input
-                    type="file"
-                    accept="video/mp4, video/webm, video/ogg"
-                    onChange={handleLocalFileUpload}
-                    style={{
-                      border: '2px dashed var(--border)',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem'
-                    }}
-                  />
-                </div>
-
-                {/* YOUTUBE URL SECTION */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary)' }}>Opción B: Enlace de YouTube</label>
-                  <input
-                    type="text"
-                    className="search-input"
-                    style={{ paddingLeft: '16px' }}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    value={uploadUrl}
-                    onChange={(e) => setUploadUrl(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Probar enlaces de demostración rápida:</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <button 
-                      className="btn-3d btn-secondary" 
-                      style={{ padding: '8px 12px', fontSize: '0.8rem', justifyContent: 'flex-start' }}
-                      onClick={() => handleTranscribe('https://www.youtube.com/watch?v=LEjhYkp8P5M')}
-                    >
-                      🎬 Tráiler de Inside Out 2 (Diálogo rápido)
-                    </button>
-                    <button 
-                      className="btn-3d btn-secondary" 
-                      style={{ padding: '8px 12px', fontSize: '0.8rem', justifyContent: 'flex-start' }}
-                      onClick={() => handleTranscribe('https://www.youtube.com/watch?v=hLAWN2_Z418')}
-                    >
-                      🇪🇸 Tráiler de La Casa de Papel (Bilingüe)
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                  <button className="btn-3d btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>
-                    Cancelar
-                  </button>
-                  <button 
-                    className="btn-3d btn-primary" 
-                    style={{ flex: 1 }} 
-                    onClick={() => handleTranscribe(uploadUrl)}
-                    disabled={!uploadUrl}
-                  >
-                    ✨ Transcribir con IA
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '1.5rem 0', gap: '1rem' }}>
-                <Mascot mood="happy" />
-                <h4 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Mentora AI está procesando...</h4>
-                
-                <div style={{ width: '100%', height: '12px', backgroundColor: 'var(--border)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <div style={{ width: `${transcribeProgress}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '6px', transition: 'width 0.15s ease' }}></div>
-                </div>
-
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                  {transcribeStatus} ({transcribeProgress}%)
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

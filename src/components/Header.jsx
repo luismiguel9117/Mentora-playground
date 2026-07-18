@@ -3,31 +3,6 @@ import React from 'react';
 export default function Header() {
   return (
     <div style={{ width: '100%' }}>
-      {/* Promo Banner */}
-      <div style={{
-        background: 'linear-gradient(90deg, #0b0f19 0%, #0ea5e9 100%)',
-        color: '#ffffff',
-        padding: '8px 2rem',
-        fontSize: '0.85rem',
-        fontWeight: 600,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: '20px',
-        flexWrap: 'wrap',
-        fontFamily: "'Inter', sans-serif"
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ background: '#fbbf24', color: '#0b0f19', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 800 }}>50% DCTO</span>
-          <span>PRECIO LANZAMIENTO: Inglés desde S/2.66 al día</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ opacity: 0.8 }}>TIEMPO LIMITADO</span>
-          <span style={{ background: '#0b0f19', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>01 : 24 : 53</span>
-        </div>
-        <span style={{ color: '#fbbf24' }}>¡Empieza hoy! Precio especial por lanzamiento</span>
-      </div>
-
       {/* Main Navbar */}
       <header className="top-header" style={{
         height: '80px',
