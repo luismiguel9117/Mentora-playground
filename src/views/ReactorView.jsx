@@ -665,10 +665,23 @@ export default function ReactorView() {
     }
 
     function onPlayerStateChange(event) {
+      try {
+        if (playerRef.current && playerRef.current.unloadModule) {
+          playerRef.current.unloadModule("captions");
+          playerRef.current.unloadModule("cc");
+        }
+      } catch (e) {}
+
       if (event.data === window.YT.PlayerState.PLAYING) {
         setIsPlaying(true);
         intervalRef.current = setInterval(() => {
           if (playerRef.current && playerRef.current.getCurrentTime) {
+            try {
+              if (playerRef.current.unloadModule) {
+                playerRef.current.unloadModule("captions");
+                playerRef.current.unloadModule("cc");
+              }
+            } catch (e) {}
             setCurrentTime(playerRef.current.getCurrentTime());
             if (playerRef.current.getDuration) {
               const dur = playerRef.current.getDuration();
@@ -847,6 +860,12 @@ export default function ReactorView() {
       if (playerRef.current && playerRef.current.seekTo) {
         try {
           playerRef.current.seekTo(targetSec, true);
+          try {
+            if (playerRef.current.unloadModule) {
+              playerRef.current.unloadModule("captions");
+              playerRef.current.unloadModule("cc");
+            }
+          } catch (e) {}
           playerRef.current.playVideo();
         } catch (e) {
           console.warn("YT Seek failed:", e);
