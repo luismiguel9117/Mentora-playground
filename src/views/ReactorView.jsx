@@ -554,6 +554,7 @@ export default function ReactorView() {
     setIsPlaying(false);
     setIsFallbackSub(false);
     sounds.playCorrect();
+    setHasStarted(true); // Skip cover overlay to go direct to video
 
     // Trigger auto fullscreen on mobile viewport wrapper directly on select video card click
     if (window.innerWidth <= 950) {
@@ -660,7 +661,7 @@ export default function ReactorView() {
           playerRef.current = new window.YT.Player('yt-player-iframe', {
             videoId: videoId,
             playerVars: {
-              autoplay: 0,
+              autoplay: 1, // Start playing automatically on load!
               controls: 0,
               rel: 0,
               showinfo: 0,
