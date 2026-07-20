@@ -720,7 +720,7 @@ export default function ReactorView() {
   }, [playerType, currentView]);
 
   const activeSub = currentSubtitles.find(
-    (s) => currentTime >= s.start && currentTime <= s.end
+    (s) => currentTime >= parseFloat(s.start) && currentTime <= parseFloat(s.end)
   );
 
 
@@ -1884,8 +1884,17 @@ export default function ReactorView() {
                     cursor: 'pointer',
                     transition: 'opacity 0.3s ease'
                   }}
-                  onClick={() => {
-                    if (playerType === 'youtube') {
+                   onClick={() => {
+                     // Request fullscreen on mobile devices on play cover tap (user gesture)
+                     if (window.innerWidth <= 950 && containerRef.current) {
+                       try {
+                         containerRef.current.requestFullscreen()
+                           .then(() => setIsFullscreen(true))
+                           .catch(err => console.warn("Auto fullscreen failed:", err));
+                       } catch (e) {}
+                     }
+
+                     if (playerType === 'youtube') {
                       if (playerRef.current && playerRef.current.playVideo) {
                         try {
                           playerRef.current.playVideo();
