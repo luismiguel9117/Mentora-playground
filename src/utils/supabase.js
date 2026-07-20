@@ -24,22 +24,22 @@ const defaultVideoCatalog = [
     thumbnail: 'https://img.youtube.com/vi/UF8uR6Z6KLc/hqdefault.jpg'
   },
   {
-    id: 'LEjhYkp8P5M',
+    id: 'Kat5Kbt092g',
     type: 'youtube',
     title: 'Inside Out 2 (Intensa-Mente 2) - Tráiler',
-    url: 'LEjhYkp8P5M',
+    url: 'Kat5Kbt092g',
     category: 'Animación / Comedia',
     emoji: '🎬',
-    thumbnail: 'https://img.youtube.com/vi/LEjhYkp8P5M/hqdefault.jpg'
+    thumbnail: 'https://img.youtube.com/vi/Kat5Kbt092g/hqdefault.jpg'
   },
   {
-    id: 'hLAWN2_Z418',
+    id: 'pL24Rby_53A',
     type: 'youtube',
     title: 'La Casa de Papel - Tráiler Bilingüe',
-    url: 'hLAWN2_Z418',
+    url: 'pL24Rby_53A',
     category: 'Series / Drama',
     emoji: '🇪🇸',
-    thumbnail: 'https://img.youtube.com/vi/hLAWN2_Z418/hqdefault.jpg'
+    thumbnail: 'https://img.youtube.com/vi/pL24Rby_53A/hqdefault.jpg'
   },
   {
     id: 'local',
@@ -51,22 +51,22 @@ const defaultVideoCatalog = [
     thumbnail: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800'
   },
   {
-    id: 'vN4U5yKsh28',
+    id: 'vP4iYif190w',
     type: 'youtube',
     title: 'Presentación del primer iPhone (2007) - Steve Jobs',
-    url: 'vN4U5yKsh28',
+    url: 'vP4iYif190w',
     category: 'Tecnología / Historia',
     emoji: '📱',
-    thumbnail: 'https://img.youtube.com/vi/vN4U5yKsh28/hqdefault.jpg'
+    thumbnail: 'https://img.youtube.com/vi/vP4iYif190w/hqdefault.jpg'
   },
   {
-    id: 'd3P-vTj-NFA',
+    id: 'A03N43A0k6I',
     type: 'youtube',
     title: 'Harry Potter - Escena del Sombrero Seleccionador',
-    url: 'd3P-vTj-NFA',
+    url: 'A03N43A0k6I',
     category: 'Cine / Fantasía',
     emoji: '🧙',
-    thumbnail: 'https://img.youtube.com/vi/d3P-vTj-NFA/hqdefault.jpg'
+    thumbnail: 'https://img.youtube.com/vi/A03N43A0k6I/hqdefault.jpg'
   }
 ];
 

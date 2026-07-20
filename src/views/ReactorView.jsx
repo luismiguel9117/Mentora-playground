@@ -28,10 +28,11 @@ const defaultVideoCatalog = [
     category: 'Desarrollo Personal',
     duration: '15:00 min',
     color: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-    emoji: '🎓'
+    emoji: '🎓',
+    thumbnail: 'https://img.youtube.com/vi/UF8uR6Z6KLc/hqdefault.jpg'
   },
   {
-    id: 'LEjhYkp8P5M',
+    id: 'Kat5Kbt092g',
     type: 'youtube',
     title: 'Inside Out 2 (Intensa-Mente 2) - Tráiler',
     description: 'Explora vocabulario coloquial sobre emociones y sentimientos cotidianos en el divertido tráiler de Disney Pixar.',
@@ -40,10 +41,11 @@ const defaultVideoCatalog = [
     category: 'Animación / Comedia',
     duration: '2:25 min',
     color: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)',
-    emoji: '🎬'
+    emoji: '🎬',
+    thumbnail: 'https://img.youtube.com/vi/Kat5Kbt092g/hqdefault.jpg'
   },
   {
-    id: 'hLAWN2_Z418',
+    id: 'pL24Rby_53A',
     type: 'youtube',
     title: 'La Casa de Papel - Tráiler Bilingüe',
     description: 'Estudia estructuras verbales sobre planificación y drama con subtítulos interactivos bilingües oficiales.',
@@ -52,7 +54,8 @@ const defaultVideoCatalog = [
     category: 'Drama / Crimen',
     duration: '1:45 min',
     color: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-    emoji: '🎭'
+    emoji: '🎭',
+    thumbnail: 'https://img.youtube.com/vi/pL24Rby_53A/hqdefault.jpg'
   },
   {
     id: 'local',
@@ -64,7 +67,34 @@ const defaultVideoCatalog = [
     category: 'Fantasía / Aventura',
     duration: '0:52 min',
     color: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    emoji: '🐉'
+    emoji: '🐉',
+    thumbnail: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800'
+  },
+  {
+    id: 'vP4iYif190w',
+    type: 'youtube',
+    title: 'Presentación del primer iPhone (2007) - Steve Jobs',
+    description: 'Analiza el vocabulario de marketing y presentación de Steve Jobs al revolucionar la tecnología móvil.',
+    difficulty: 'B1 - Intermedio',
+    difficultyKey: 'B1',
+    category: 'Tecnología / Historia',
+    duration: '1:11 min',
+    color: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+    emoji: '📱',
+    thumbnail: 'https://img.youtube.com/vi/vP4iYif190w/hqdefault.jpg'
+  },
+  {
+    id: 'A03N43A0k6I',
+    type: 'youtube',
+    title: 'Harry Potter - Escena del Sombrero Seleccionador',
+    description: 'Escucha la pronunciación en inglés británico en la mítica escena del Sombrero Seleccionador y la decisión de Gryffindor.',
+    difficulty: 'B1 - Intermedio',
+    difficultyKey: 'B1',
+    category: 'Cine / Fantasía',
+    duration: '0:42 min',
+    color: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+    emoji: '🧙',
+    thumbnail: 'https://img.youtube.com/vi/A03N43A0k6I/hqdefault.jpg'
   }
 ];
 
