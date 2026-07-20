@@ -49,6 +49,24 @@ const defaultVideoCatalog = [
     category: 'Fantasía / Animación',
     emoji: '🐲',
     thumbnail: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800'
+  },
+  {
+    id: 'vN4U5yKsh28',
+    type: 'youtube',
+    title: 'Presentación del primer iPhone (2007) - Steve Jobs',
+    url: 'vN4U5yKsh28',
+    category: 'Tecnología / Historia',
+    emoji: '📱',
+    thumbnail: 'https://img.youtube.com/vi/vN4U5yKsh28/hqdefault.jpg'
+  },
+  {
+    id: 'd3P-vTj-NFA',
+    type: 'youtube',
+    title: 'Harry Potter - Escena del Sombrero Seleccionador',
+    url: 'd3P-vTj-NFA',
+    category: 'Cine / Fantasía',
+    emoji: '🧙',
+    thumbnail: 'https://img.youtube.com/vi/d3P-vTj-NFA/hqdefault.jpg'
   }
 ];
 

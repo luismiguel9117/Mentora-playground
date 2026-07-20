@@ -4,6 +4,18 @@ import { getCatalog, loadSubtitles, saveSubtitles } from '../utils/supabase';
 import { sounds } from '../components/SoundManager';
 import Mascot from '../components/Mascot';
 
+// Helper to guarantee every video has a valid cover image
+const getThumbnail = (lesson) => {
+  if (lesson?.thumbnail && (lesson.thumbnail.startsWith('http') || lesson.thumbnail.startsWith('/'))) {
+    return lesson.thumbnail;
+  }
+  if (lesson?.type === 'youtube' || (lesson?.url && !lesson.url.startsWith('http'))) {
+    const ytId = lesson.id || lesson.url;
+    return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+  }
+  return 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800'; // Default fantasy illustration
+};
+
 // Curated Video Lessons Database
 const defaultVideoCatalog = [
   {
@@ -1609,36 +1621,37 @@ export default function ReactorView() {
               }}
             >
               {/* Graphic Card Cover */}
-              <div style={{
-                background: (lesson.thumbnail || (lesson.type === 'youtube' ? `https://img.youtube.com/vi/${lesson.id}/hqdefault.jpg` : ''))
-                  ? `url(${lesson.thumbnail || `https://img.youtube.com/vi/${lesson.id}/hqdefault.jpg`}) center/cover no-repeat`
-                  : (lesson.color || 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'),
-                aspectRatio: '1 / 1', // Perfect square format for mobile/PC
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: (lesson.thumbnail || lesson.type === 'youtube') ? '0rem' : '3.5rem',
-                color: '#ffffff',
-                position: 'relative'
-              }}>
-                {!(lesson.thumbnail || lesson.type === 'youtube') && (lesson.emoji || '🎬')}
-                {/* Duration Tag */}
-                <span style={{
-                  position: 'absolute',
-                  bottom: '10px',
-                  right: '10px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                  color: '#ffffff',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  backdropFilter: 'blur(4px)'
-                }}>
-                  ⏱️ {lesson.duration || 'Lección'}
-                </span>
-              </div>
+              {(() => {
+                const coverUrl = getThumbnail(lesson);
+                return (
+                  <div style={{
+                    background: `url(${coverUrl}) center/cover no-repeat`,
+                    aspectRatio: '1 / 1', // Perfect square format for mobile/PC
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    position: 'relative'
+                  }}>
+                    {/* Duration Tag */}
+                    <span style={{
+                      position: 'absolute',
+                      bottom: '10px',
+                      right: '10px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                      color: '#ffffff',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      backdropFilter: 'blur(4px)'
+                    }}>
+                      ⏱️ {lesson.duration || 'Lección'}
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Information Body */}
               <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flexGrow: 1, gap: '8px' }}>
@@ -1759,7 +1772,7 @@ export default function ReactorView() {
   // --- RENDERING BRANCH 2: INTERACTIVE VIDEO PLAYER ---
   const renderInteractivePlayer = () => {
     const lesson = videoCatalog.find(v => v.id === videoId);
-    const thumbnailSrc = lesson?.thumbnail || (lesson?.type === 'youtube' ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '');
+    const thumbnailSrc = getThumbnail(lesson);
 
     return (
       <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
