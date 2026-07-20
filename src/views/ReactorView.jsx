@@ -1736,65 +1736,9 @@ export default function ReactorView() {
               </div>
             </div>
           ))}
-
-          {/* AI Auto-Transcription Prompt Card */}
-          <div
-            className="btn-3d"
-            onClick={() => {
-              setShowModal(true);
-              setUploadUrl('');
-            }}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: '20px',
-              border: '2.5px dashed #cbd5e1',
-              background: '#f8fafc',
-              boxShadow: '0 8px 0 #cbd5e1',
-              padding: '2rem',
-              textAlign: 'center',
-              cursor: 'pointer',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '12px',
-              minHeight: '300px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <div style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(79, 70, 229, 0.1)',
-              color: '#4f46e5',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '2rem'
-            }}>
-              ✨
-            </div>
-            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.3rem', fontWeight: 800, color: '#0f172a' }}>
-              Subir tu propio vídeo o Enlace
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#475569', maxWidth: '240px', lineHeight: '1.5' }}>
-              Importa un archivo .mp4 de tu computadora o pega cualquier dirección de YouTube para transcribir diálogos con Inteligencia Artificial.
-            </p>
-            <span style={{
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              backgroundColor: '#4f46e5',
-              color: '#ffffff',
-              padding: '6px 16px',
-              borderRadius: '9999px',
-              marginTop: '8px'
-            }}>
-              Procesar con IA ⚡
-            </span>
-          </div>
         </div>
         
-        <Mascot mood="happy" text={`¡Hola${userProfile?.name ? ' ' + userProfile.name : ''}! Elige cualquiera de los vídeos del catálogo o sube el tuyo propio para empezar a aprender inglés con Cine Reactor.`} />
+        <Mascot mood="happy" text={`¡Hola${userProfile?.name ? ' ' + userProfile.name : ''}! Elige cualquiera de los vídeos del catálogo para empezar a aprender inglés con Cine Reactor.`} />
       </div>
     );
   };
