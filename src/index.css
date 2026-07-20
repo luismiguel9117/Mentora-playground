@@ -2094,4 +2094,128 @@ kbd {
   border-bottom-width: 0px !important;
 }
 
+/* Rotate Prompt Overlay for Portrait Mobile */
+.rotate-device-prompt {
+  display: none;
+}
+
+@media (max-width: 950px) and (orientation: portrait) {
+  .rotate-device-prompt {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at center, #1e1b4b 0%, #06060e 100%);
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    text-align: center;
+    padding: 2rem;
+    font-family: 'Outfit', sans-serif;
+    gap: 16px;
+  }
+  
+  .rotate-device-prompt svg {
+    animation: rotatePhone 2.5s infinite ease-in-out;
+  }
+}
+
+@keyframes rotatePhone {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Mobile Landscape responsive design optimization for Cine Reactor */
+@media (max-width: 950px) and (orientation: landscape) {
+  /* Hide global page layout headers/footers to save screen vertical space */
+  .view-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  /* Hide header bar in interactive player */
+  .view-container > div > div[style*="justify-content: space-between"] {
+    display: none !important;
+  }
+  
+  /* Make the reactor layout occupy full screen, hiding padding and borders */
+  .reactor-layout {
+    grid-template-columns: 1fr !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+    background-color: #000 !important;
+  }
+  
+  /* Hide the right transcript sidebar in landscape to maximize video canvas */
+  .transcript-sidebar {
+    display: none !important;
+  }
+  
+  .player-column {
+    gap: 0 !important;
+    height: 100vh !important;
+    justify-content: center !important;
+  }
+  
+  /* Video Player Container fills the screen */
+  .video-player-container {
+    border-radius: 0 !important;
+    border: none !important;
+    height: 100vh !important;
+    padding-bottom: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* YouTube iframe inside container scales */
+  #yt-player-iframe {
+    height: 125% !important;
+    top: -12.5% !important;
+  }
+  
+  /* Make custom navigation buttons larger for mobile thumbs */
+  .phrase-vertical-controls {
+    left: 20px !important;
+    gap: 16px !important;
+  }
+  
+  .phrase-vertical-controls button {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 1.5rem !important;
+    background-color: rgba(15, 23, 42, 0.85) !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  }
+  
+  /* Auto-pause toggle right */
+  .ap-vertical-control {
+    right: 20px !important;
+    padding: 10px 8px !important;
+  }
+  
+  /* Adjust size and positioning of subtitle overlay in full mobile screen */
+  .subtitles-video-overlay {
+    bottom: 60px !important;
+    width: 90% !important;
+  }
+  
+  .subtitles-video-overlay div {
+    padding: 6px 14px !important;
+  }
+  
+  .subtitle-line.primary-lang {
+    font-size: 1.2rem !important;
+  }
+  
+  .subtitle-line.secondary-lang {
+    font-size: 0.95rem !important;
+  }
+}
+
+
 

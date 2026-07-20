@@ -967,6 +967,13 @@ export default function ReactorView() {
   // Hover translator with API fetches
   const handleWordHover = (event, wordText, lang = 'en') => {
     const wordKey = wordText.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
+    
+    // Toggle close if clicking/hovering the already selected word
+    if (hoveredWord && hoveredWord.key === wordKey && event.type === 'click') {
+      setHoveredWord(null);
+      return;
+    }
+
     const rect = event.target.getBoundingClientRect();
     const container = document.querySelector('.video-player-container');
     const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
@@ -1119,6 +1126,10 @@ export default function ReactorView() {
         className="hoverable-word-span"
         onMouseEnter={(e) => handleWordHover(e, w, lang)}
         onMouseLeave={handleWordLeave}
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent toggling video play/pause on click
+          handleWordHover(e, w, lang);
+        }}
       >
         {w}
       </span>
@@ -2121,24 +2132,45 @@ export default function ReactorView() {
                   onMouseEnter={() => setHoveredWord(hoveredWord)}
                   onMouseLeave={handleWordLeave}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span className="tooltip-word-title">
-                      {hoveredWord.text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")}
-                    </span>
-                    <button
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginLeft: '6px' }}
-                      onClick={() => safeSpeakSpeech(hoveredWord.text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, ""))}
-                    >🔊</button>
-                    {!hoveredWord.loading && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span className="tooltip-word-title" style={{ textTransform: 'capitalize' }}>
+                        {hoveredWord.text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")}
+                      </span>
                       <button
-                        className={`star-save-word-btn ${hoveredWord.isSaved ? 'saved' : ''}`}
-                        onClick={() => toggleSaveWord(hoveredWord.key, { translation: hoveredWord.translation, alternatives: hoveredWord.alternatives, category: hoveredWord.category })}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}
+                        onClick={() => safeSpeakSpeech(hoveredWord.text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, ""))}
+                      >🔊</button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {!hoveredWord.loading && (
+                        <button
+                          className={`star-save-word-btn ${hoveredWord.isSaved ? 'saved' : ''}`}
+                          onClick={() => toggleSaveWord(hoveredWord.key, { translation: hoveredWord.translation, alternatives: hoveredWord.alternatives, category: hoveredWord.category })}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={hoveredWord.isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                          </svg>
+                        </button>
+                      )}
+                      <button
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          cursor: 'pointer', 
+                          fontSize: '1.25rem', 
+                          color: 'var(--text-secondary)',
+                          padding: 0,
+                          lineHeight: 1
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHoveredWord(null);
+                        }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={hoveredWord.isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                        </svg>
+                        ×
                       </button>
-                    )}
+                    </div>
                   </div>
                   <span className="tooltip-word-category">{hoveredWord.category}</span>
                   <div className="tooltip-word-meaning">
@@ -2432,6 +2464,17 @@ export default function ReactorView() {
         padding: currentView === 'player' ? '1rem 2rem' : '2rem'
       }}
     >
+      {/* Rotate Prompt Overlay for Portrait Mobile Devices */}
+      <div className="rotate-device-prompt">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+          <line x1="12" y1="18" x2="12.01" y2="18" />
+        </svg>
+        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Gira tu dispositivo</h3>
+        <p style={{ margin: 0, fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '280px' }}>
+          Para una experiencia de aprendizaje interactiva óptima, gira tu celular horizontalmente (Modo Paisaje).
+        </p>
+      </div>
       
       {/* Intro Overlay — Minimalist TV style */}
       {introActive && (
