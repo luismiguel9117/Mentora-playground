@@ -361,15 +361,15 @@ export default function ReactorView() {
   // Single source of truth states for subtitles and vocabulary dictionary
   const [currentSubtitles, setCurrentSubtitles] = useState(() => {
     if (routeVideoId === 'UF8uR6Z6KLc') return jobsSubtitles;
-    if (routeVideoId === 'LEjhYkp8P5M') return insideOutSubtitles;
-    if (routeVideoId === 'hLAWN2_Z418') return lcdpSubtitles;
+    if (routeVideoId === 'Kat5Kbt092g') return insideOutSubtitles;
+    if (routeVideoId === 'pL24Rby_53A') return lcdpSubtitles;
     if (routeVideoId === 'local') return localSubtitles;
     return [];
   });
   const [currentDictionary, setCurrentDictionary] = useState(() => {
     if (routeVideoId === 'UF8uR6Z6KLc') return jobsDictionary;
-    if (routeVideoId === 'LEjhYkp8P5M') return insideOutDictionary;
-    if (routeVideoId === 'hLAWN2_Z418') return lcdpDictionary;
+    if (routeVideoId === 'Kat5Kbt092g') return insideOutDictionary;
+    if (routeVideoId === 'pL24Rby_53A') return lcdpDictionary;
     if (routeVideoId === 'local') return localDictionary;
     return {};
   });
@@ -389,9 +389,9 @@ export default function ReactorView() {
         // Fallback to built-in presets if no subtitles in database
         if (videoId === 'UF8uR6Z6KLc') {
           setCurrentSubtitles(jobsSubtitles);
-        } else if (videoId === 'LEjhYkp8P5M') {
+        } else if (videoId === 'Kat5Kbt092g') {
           setCurrentSubtitles(insideOutSubtitles);
-        } else if (videoId === 'hLAWN2_Z418') {
+        } else if (videoId === 'pL24Rby_53A') {
           setCurrentSubtitles(lcdpSubtitles);
         } else if (videoId === 'local') {
           setCurrentSubtitles(localSubtitles);
@@ -664,9 +664,9 @@ export default function ReactorView() {
           
           if (lesson.id === 'UF8uR6Z6KLc') {
             setCurrentDictionary(jobsDictionary);
-          } else if (lesson.id === 'LEjhYkp8P5M') {
+          } else if (lesson.id === 'Kat5Kbt092g') {
             setCurrentDictionary(insideOutDictionary);
-          } else if (lesson.id === 'hLAWN2_Z418') {
+          } else if (lesson.id === 'pL24Rby_53A') {
             setCurrentDictionary(lcdpDictionary);
           } else {
             setCurrentDictionary({});
@@ -1397,10 +1397,10 @@ export default function ReactorView() {
     setPlayerType('youtube');
     sounds.playCompleted();
 
-    if (id === 'LEjhYkp8P5M') {
+    if (id === 'Kat5Kbt092g') {
       setCurrentSubtitles(insideOutSubtitles);
       setCurrentDictionary(insideOutDictionary);
-    } else if (id === 'hLAWN2_Z418') {
+    } else if (id === 'pL24Rby_53A') {
       setCurrentSubtitles(lcdpSubtitles);
       setCurrentDictionary(lcdpDictionary);
     } else if (id === 'UF8uR6Z6KLc') {
@@ -1590,7 +1590,7 @@ export default function ReactorView() {
           </div>
 
           {/* Search bar */}
-          <div style={{ position: 'relative', width: '320px' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '320px' }}>
             <input
               type="text"
               placeholder="Buscar películas o categorías..."
@@ -1601,7 +1601,7 @@ export default function ReactorView() {
                 padding: '10px 16px 10px 40px',
                 border: '1.5px solid #cbd5e1',
                 borderRadius: '9999px',
-                fontSize: '0.85rem',
+                fontSize: '16px',
                 outline: 'none',
                 backgroundColor: '#f8fafc',
                 fontFamily: "'Inter', sans-serif"
@@ -2699,7 +2699,7 @@ export default function ReactorView() {
                   border: '2.5px solid #4b5563',
                   borderRadius: '12px',
                   color: '#ffffff',
-                  fontSize: '0.95rem',
+                  fontSize: '16px',
                   outline: 'none',
                   transition: 'border-color 0.2s',
                   boxSizing: 'border-box'

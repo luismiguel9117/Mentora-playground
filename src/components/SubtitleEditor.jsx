@@ -98,8 +98,8 @@ export default function SubtitleEditor() {
         if (!matchedVideo) {
           const defaults = {
             'UF8uR6Z6KLc': { type: 'youtube', title: 'Discurso de Steve Jobs en Stanford', url: 'UF8uR6Z6KLc' },
-            'LEjhYkp8P5M': { type: 'youtube', title: 'Inside Out 2 (Intensa-Mente 2) - Tráiler', url: 'LEjhYkp8P5M' },
-            'hLAWN2_Z418': { type: 'youtube', title: 'La Casa de Papel - Tráiler Bilingüe', url: 'hLAWN2_Z418' },
+            'Kat5Kbt092g': { type: 'youtube', title: 'Inside Out 2 (Intensa-Mente 2) - Tráiler', url: 'Kat5Kbt092g' },
+            'pL24Rby_53A': { type: 'youtube', title: 'La Casa de Papel - Tráiler Bilingüe', url: 'pL24Rby_53A' },
             'local': { type: 'local', title: 'Sintel - Cortometraje de Fantasía', url: 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4' },
           };
           matchedVideo = defaults[videoId] || { type: 'youtube', title: 'Video Personalizado', url: videoId };

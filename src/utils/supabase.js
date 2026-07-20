@@ -167,7 +167,10 @@ export async function loadSubtitles(videoId) {
   try {
     const cached = localStorage.getItem(`mentora_subtitles_${videoId}`);
     if (cached) {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn("Failed to read from localStorage:", e);
