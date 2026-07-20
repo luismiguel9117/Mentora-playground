@@ -555,6 +555,21 @@ export default function ReactorView() {
     setIsFallbackSub(false);
     sounds.playCorrect();
 
+    // Trigger auto fullscreen on mobile viewport wrapper directly on select video card click
+    if (window.innerWidth <= 950) {
+      const el = document.documentElement;
+      if (el.requestFullscreen) {
+        el.requestFullscreen()
+          .then(() => setIsFullscreen(true))
+          .catch(err => console.warn("Auto fullscreen failed on lobby click:", err));
+      }
+      try {
+        if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+          window.screen.orientation.lock('landscape').catch(() => {});
+        }
+      } catch (e) {}
+    }
+
     if (lesson.type === 'youtube') {
       setPlayerType('youtube');
       setVideoId(lesson.id);
@@ -652,7 +667,8 @@ export default function ReactorView() {
               modestbranding: 1,
               enablejsapi: 1,
               cc_load_policy: 3, // Force closed captions OFF
-              iv_load_policy: 3  // Disable annotations
+              iv_load_policy: 3, // Disable annotations
+              playsinline: 1     // Force inline playback on mobile Safari/Chrome
             },
             events: {
               'onStateChange': onPlayerStateChange
@@ -1410,7 +1426,7 @@ export default function ReactorView() {
     });
 
     return (
-      <div style={{ padding: '1rem 0', fontFamily: "'Inter', sans-serif", animation: 'fadeIn 0.5s ease-out' }}>
+      <div className="catalog-lobby-container" style={{ padding: '1rem 0', fontFamily: "'Inter', sans-serif", animation: 'fadeIn 0.5s ease-out' }}>
         
         {/* Header / Sub-banner */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem', marginTop: '1rem' }}>
@@ -1421,9 +1437,9 @@ export default function ReactorView() {
             Selecciona una lección interactiva de nuestro catálogo oficial o sube tu propia película para subtitularla al instante con IA.
           </p>
         </div>
-
+ 
         {/* Filters and Search Bar Row */}
-        <div style={{
+        <div className="catalog-filters-row" style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -1499,7 +1515,7 @@ export default function ReactorView() {
         </div>
 
         {/* Video Catalog Grid */}
-        <div style={{
+        <div className="catalog-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
           gap: '1.5rem',
@@ -1848,6 +1864,7 @@ export default function ReactorView() {
                   key={localVideoUrl}
                   ref={localVideoRef}
                   src={localVideoUrl}
+                  playsInline
                   onTimeUpdate={handleLocalTimeUpdate}
                   onLoadedMetadata={(e) => setVideoDuration(e.target.duration)}
                   onDurationChange={(e) => setVideoDuration(e.target.duration)}

@@ -159,7 +159,8 @@ export default function SubtitleEditor() {
             modestbranding: 1,
             enablejsapi: 1,
             cc_load_policy: 3, // Force closed captions OFF
-            iv_load_policy: 3  // Disable annotations
+            iv_load_policy: 3, // Disable annotations
+            playsinline: 1     // Force inline playback on mobile
           },
           events: {
             'onReady': (event) => {

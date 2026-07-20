@@ -2217,5 +2217,41 @@ kbd {
   }
 }
 
+/* Responsive catalog lobby design for mobile screens (portrait and landscape) */
+@media (max-width: 768px) {
+  .catalog-lobby-container h1 {
+    font-size: 1.7rem !important;
+    line-height: 1.25 !important;
+  }
+  
+  .catalog-lobby-container p {
+    font-size: 0.9rem !important;
+    margin-top: 0.4rem !important;
+  }
+  
+  .catalog-filters-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    padding: 1rem !important;
+    border-radius: 12px !important;
+  }
+  
+  .catalog-filters-row > div:first-child {
+    justify-content: center !important;
+    width: 100% !important;
+  }
+  
+  .catalog-filters-row > div:last-child {
+    width: 100% !important;
+  }
+  
+  .catalog-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.2rem !important;
+  }
+}
+
+
 
 
