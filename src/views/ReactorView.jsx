@@ -1714,18 +1714,33 @@ export default function ReactorView() {
               }}
             >
               {playerType === 'youtube' ? (
-                <div 
-                  id="yt-player-iframe" 
-                  style={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    width: '100%', 
-                    height: '100%', 
-                    border: 'none',
-                    backgroundColor: '#000'
-                  }}
-                ></div>
+                <>
+                  <div 
+                    id="yt-player-iframe" 
+                    style={{ 
+                      position: 'absolute', 
+                      top: 0, 
+                      left: 0, 
+                      width: '100%', 
+                      height: '100%', 
+                      border: 'none',
+                      backgroundColor: '#000'
+                    }}
+                  ></div>
+                  <div 
+                    onClick={handleTogglePlay}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      zIndex: 10,
+                      cursor: 'pointer',
+                      background: 'transparent'
+                    }}
+                  />
+                </>
               ) : (
                 <video
                   key={localVideoUrl}
