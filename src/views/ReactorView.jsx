@@ -611,6 +611,18 @@ export default function ReactorView() {
     // Navigate back to the Catalog Selection Lobby
     safeCancelSpeech();
     setIsPlaying(false);
+    setIsFullscreen(false); // Make sure virtual fullscreen is closed
+    
+    // Destroy player instance to avoid dead iframe bindings
+    if (playerRef.current) {
+      try {
+        if (playerRef.current.destroy) {
+          playerRef.current.destroy();
+        }
+      } catch (e) {}
+      playerRef.current = null;
+    }
+    
     setCurrentView('catalog');
     sounds.playCorrect();
   };
@@ -637,7 +649,18 @@ export default function ReactorView() {
 
   // Poll for YT library loaded state
   useEffect(() => {
-    if (playerType !== 'youtube' || currentView !== 'player') return;
+    if (playerType !== 'youtube' || currentView !== 'player') {
+      // Destroy player if we are not in player view to prevent rendering inside unmounted elements
+      if (playerRef.current) {
+        try {
+          if (playerRef.current.destroy) {
+            playerRef.current.destroy();
+          }
+        } catch (e) {}
+        playerRef.current = null;
+      }
+      return;
+    }
 
     let sdkTag = document.getElementById('youtube-sdk');
     if (!sdkTag) {
