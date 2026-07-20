@@ -128,7 +128,7 @@ export default function SubtitleEditor() {
 
   // YouTube SDK initialization
   useEffect(() => {
-    if (!videoInfo || videoInfo.type !== 'youtube') return;
+    if (loading || !videoInfo || videoInfo.type !== 'youtube') return;
 
     let sdkTag = document.getElementById('youtube-sdk-editor');
     if (!sdkTag) {
@@ -194,7 +194,8 @@ export default function SubtitleEditor() {
       clearInterval(intervalId);
       ytPlayerRef.current = null;
     };
-  }, [videoId, videoInfo]);
+  }, [videoId, videoInfo, loading]);
+
 
   // Local Video time updates
   const handleTimeUpdate = () => {
