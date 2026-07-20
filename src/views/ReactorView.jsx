@@ -840,10 +840,13 @@ export default function ReactorView() {
   };
 
   const handleSeek = (seconds) => {
+    const targetSec = parseFloat(seconds);
+    if (isNaN(targetSec)) return;
+
     if (playerType === 'youtube') {
       if (playerRef.current && playerRef.current.seekTo) {
         try {
-          playerRef.current.seekTo(seconds, true);
+          playerRef.current.seekTo(targetSec, true);
           playerRef.current.playVideo();
         } catch (e) {
           console.warn("YT Seek failed:", e);
@@ -852,7 +855,7 @@ export default function ReactorView() {
     } else {
       if (localVideoRef.current) {
         try {
-          localVideoRef.current.currentTime = seconds;
+          localVideoRef.current.currentTime = targetSec;
           localVideoRef.current.play()
             .then(() => setIsPlaying(true))
             .catch(e => console.log(e));
@@ -892,11 +895,11 @@ export default function ReactorView() {
   };
 
   const handlePrevSub = () => {
-    const currentIndex = currentSubtitles.findIndex(s => currentTime >= s.start && currentTime <= s.end);
+    const currentIndex = currentSubtitles.findIndex(s => currentTime >= parseFloat(s.start) && currentTime <= parseFloat(s.end));
     if (currentIndex > 0) {
       handleSeek(currentSubtitles[currentIndex - 1].start);
     } else if (currentIndex === -1) {
-      const preceding = [...currentSubtitles].reverse().find(s => currentTime > s.end);
+      const preceding = [...currentSubtitles].reverse().find(s => currentTime > parseFloat(s.end));
       if (preceding) {
         handleSeek(preceding.start);
       }
@@ -910,11 +913,11 @@ export default function ReactorView() {
   };
 
   const handleNextSub = () => {
-    const currentIndex = currentSubtitles.findIndex(s => currentTime >= s.start && currentTime <= s.end);
+    const currentIndex = currentSubtitles.findIndex(s => currentTime >= parseFloat(s.start) && currentTime <= parseFloat(s.end));
     if (currentIndex !== -1 && currentIndex < currentSubtitles.length - 1) {
       handleSeek(currentSubtitles[currentIndex + 1].start);
     } else if (currentIndex === -1) {
-      const succeeding = currentSubtitles.find(s => currentTime < s.start);
+      const succeeding = currentSubtitles.find(s => currentTime < parseFloat(s.start));
       if (succeeding) {
         handleSeek(succeeding.start);
       }
@@ -943,7 +946,7 @@ export default function ReactorView() {
   };
 
   // Hover translator with API fetches
-  const handleWordHover = (event, wordText) => {
+  const handleWordHover = (event, wordText, lang = 'en') => {
     const wordKey = wordText.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
     const rect = event.target.getBoundingClientRect();
     const container = document.querySelector('.video-player-container');
@@ -951,6 +954,8 @@ export default function ReactorView() {
     const x = rect.left - containerRect.left + rect.width / 2;
     const y = rect.top - containerRect.top;
 
+    const cleanWord = wordText.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
+    const categoryText = lang === 'es' ? `En español: ${cleanWord}` : `En inglés: ${cleanWord}`;
     const definition = (currentDictionary || {})[wordKey];
 
     if (definition) {
@@ -961,6 +966,7 @@ export default function ReactorView() {
         y,
         isSaved: savedWords.some(w => w.key === wordKey),
         loading: false,
+        category: categoryText,
         ...definition
       });
     } else {
@@ -971,62 +977,113 @@ export default function ReactorView() {
         y,
         loading: true,
         translation: "Traduciendo...",
-        category: "Cargando..."
+        category: categoryText
       });
 
-      const transPromise = fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(wordKey)}&langpair=en|es`)
-        .then(res => res.json())
-        .catch(() => null);
+      if (lang === 'es') {
+        // Spanish word: fetch Spanish synonyms/related words from Datamuse (v=es)
+        fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(wordKey)}&v=es&max=4`)
+          .then(res => res.json())
+          .then(data => {
+            const synonyms = Array.isArray(data)
+              ? data.map(item => item.word).filter(w => w.toLowerCase() !== wordKey)
+              : [];
+            const mainMeaning = synonyms[0] || "Sinónimos no encontrados";
+            const alternatives = synonyms.length > 0 ? synonyms : [wordText];
 
-      const datamusePromise = fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(wordKey)}&max=3`)
-        .then(res => res.json())
-        .catch(() => []);
+            const newDefinition = {
+              translation: mainMeaning,
+              alternatives,
+              category: categoryText
+            };
 
-      Promise.all([transPromise, datamusePromise])
-        .then(([transData, datamuseData]) => {
-          const translation = transData?.responseData?.translatedText || "Traducción no disponible";
-          const related = Array.isArray(datamuseData)
-            ? datamuseData.map(item => item.word).filter(w => w.toLowerCase() !== wordKey)
-            : [];
-          const alternatives = [translation, ...related];
+            setCurrentDictionary(prev => ({
+              ...prev,
+              [wordKey]: newDefinition
+            }));
 
-          const newDefinition = {
-            translation,
-            alternatives,
-            category: "Palabra IA"
-          };
-
-          setCurrentDictionary(prev => ({
-            ...prev,
-            [wordKey]: newDefinition
-          }));
-
-          setHoveredWord(curr => {
-            if (curr && curr.key === wordKey) {
-              return {
-                ...curr,
-                loading: false,
-                isSaved: savedWords.some(w => w.key === wordKey),
-                ...newDefinition
-              };
-            }
-            return curr;
+            setHoveredWord(curr => {
+              if (curr && curr.key === wordKey) {
+                return {
+                  ...curr,
+                  loading: false,
+                  isSaved: savedWords.some(w => w.key === wordKey),
+                  ...newDefinition
+                };
+              }
+              return curr;
+            });
+          })
+          .catch(err => {
+            console.warn("Spanish synonyms fetch failed:", err);
+            setHoveredWord(curr => {
+              if (curr && curr.key === wordKey) {
+                return {
+                  ...curr,
+                  loading: false,
+                  translation: "Error al cargar sinónimos",
+                  category: categoryText
+                };
+              }
+              return curr;
+            });
           });
-        })
-        .catch(err => {
-          console.warn("Translation and synonyms fetch failed:", err);
-          setHoveredWord(curr => {
-            if (curr && curr.key === wordKey) {
-              return {
-                ...curr,
-                loading: false,
-                translation: "No se pudo traducir",
-                category: "Error"
-              };
-            }
-            return curr;
+      } else {
+        // English word: fetch translation (MyMemory) and English synonyms/related words (Datamuse)
+        const transPromise = fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(wordKey)}&langpair=en|es`)
+          .then(res => res.json())
+          .catch(() => null);
+
+        const datamusePromise = fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(wordKey)}&max=3`)
+          .then(res => res.json())
+          .catch(() => []);
+
+        Promise.all([transPromise, datamusePromise])
+          .then(([transData, datamuseData]) => {
+            const translation = transData?.responseData?.translatedText || "Traducción no disponible";
+            const related = Array.isArray(datamuseData)
+              ? datamuseData.map(item => item.word).filter(w => w.toLowerCase() !== wordKey)
+              : [];
+            const alternatives = [translation, ...related];
+
+            const newDefinition = {
+              translation,
+              alternatives,
+              category: categoryText
+            };
+
+            setCurrentDictionary(prev => ({
+              ...prev,
+              [wordKey]: newDefinition
+            }));
+
+            setHoveredWord(curr => {
+              if (curr && curr.key === wordKey) {
+                return {
+                  ...curr,
+                  loading: false,
+                  isSaved: savedWords.some(w => w.key === wordKey),
+                  ...newDefinition
+                };
+              }
+              return curr;
+            });
+          })
+          .catch(err => {
+            console.warn("Translation and synonyms fetch failed:", err);
+            setHoveredWord(curr => {
+              if (curr && curr.key === wordKey) {
+                return {
+                  ...curr,
+                  loading: false,
+                  translation: "No se pudo traducir",
+                  category: categoryText
+                };
+              }
+              return curr;
+            });
           });
-        });
+      }
     }
   };
 
@@ -1034,14 +1091,14 @@ export default function ReactorView() {
     setHoveredWord(null);
   };
 
-  const renderHoverableSentence = (sentence) => {
+  const renderHoverableSentence = (sentence, lang = 'en') => {
     if (!sentence) return null;
     const words = sentence.split(" ");
     return words.map((w, index) => (
       <span
         key={index}
         className="hoverable-word-span"
-        onMouseEnter={(e) => handleWordHover(e, w)}
+        onMouseEnter={(e) => handleWordHover(e, w, lang)}
         onMouseLeave={handleWordLeave}
       >
         {w}
@@ -1859,7 +1916,8 @@ export default function ReactorView() {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px',
-                  zIndex: 25
+                  zIndex: 25,
+                  pointerEvents: 'auto' // Ensure controls receive click events
                 }}
               >
                 <button 
@@ -2021,11 +2079,11 @@ export default function ReactorView() {
                   }}>
                     {/* Primary English Subtitle Line */}
                     <div className="subtitle-line primary-lang" style={{ justifyContent: 'center', fontSize: '1.35rem', fontWeight: 700, color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {renderHoverableSentence(activeSub.en)}
+                      {renderHoverableSentence(activeSub.en, 'en')}
                     </div>
                     {/* Secondary Spanish Translation Line */}
                     <div className="subtitle-line secondary-lang" style={{ justifyContent: 'center', fontSize: '1.05rem', fontWeight: 500, color: '#cbd5e1', marginTop: '4px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {renderHoverableSentence(activeSub.es)}
+                      {renderHoverableSentence(activeSub.es, 'es')}
                     </div>
                   </div>
                 </div>
