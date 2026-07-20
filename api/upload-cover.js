@@ -1,5 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://voxzynltslpdpgqyfsej.supabase.co';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_3a9WwKsi5mlX_AkzsxgGfg_7FFX3Y0W';
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -16,32 +20,35 @@ export default async function handler(req, res) {
 
     const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     let buffer;
+    let contentType = 'image/png';
     if (matches && matches.length === 3) {
+      contentType = matches[1];
       buffer = Buffer.from(matches[2], 'base64');
     } else {
       buffer = Buffer.from(base64Data, 'base64');
     }
 
-    // Vercel filesystem is read-only in production — suggest using a storage service
-    try {
-      const coversDir = path.resolve(process.cwd(), 'public/assets/covers');
-      if (!fs.existsSync(coversDir)) {
-        fs.mkdirSync(coversDir, { recursive: true });
-      }
-      const cleanFilename = filename.toLowerCase().replace(/[^a-z0-9\.\-_]/g, '_');
-      const uniqueFilename = `${Date.now()}_${cleanFilename}`;
-      const filePath = path.join(coversDir, uniqueFilename);
-      fs.writeFileSync(filePath, buffer);
-      return res.status(200).json({ success: true, url: `/assets/covers/${uniqueFilename}` });
-    } catch {
-      // On Vercel read-only filesystem — return a data URL as fallback
-      return res.status(200).json({
-        success: true,
-        url: base64Data, // Return the base64 data URL directly as the image src
-        warning: 'En Vercel las imágenes no se pueden guardar permanentemente. Usa una URL de imagen externa (Cloudinary, ImgBB, etc.) para miniaturas persistentes.'
+    const cleanFilename = filename.toLowerCase().replace(/[^a-z0-9\.\-_]/g, '_');
+    const uniqueFilename = `${Date.now()}_${cleanFilename}`;
+
+    // Upload buffer directly to Supabase Storage 'covers' bucket
+    const { data, error } = await supabase.storage
+      .from('covers')
+      .upload(uniqueFilename, buffer, {
+        contentType: contentType,
+        upsert: true
       });
-    }
+
+    if (error) throw error;
+
+    // Get the public URL of the uploaded asset
+    const { data: { publicUrl } } = supabase.storage
+      .from('covers')
+      .getPublicUrl(uniqueFilename);
+
+    return res.status(200).json({ success: true, url: publicUrl });
   } catch (err) {
+    console.error('Storage upload failed:', err.message);
     return res.status(500).json({ error: err.message });
   }
 }
