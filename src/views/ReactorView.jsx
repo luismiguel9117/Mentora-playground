@@ -424,6 +424,11 @@ export default function ReactorView() {
   };
 
   const handleToggleFullscreen = () => {
+    if (window.innerWidth <= 950) {
+      setIsFullscreen(prev => !prev);
+      return;
+    }
+
     if (!containerRef.current) return;
     
     if (!document.fullscreenElement) {
@@ -437,7 +442,7 @@ export default function ReactorView() {
     }
   };
 
-  // Monitor fullscreen exit via ESC key
+  // Monitor fullscreen changes and manage virtual fullscreen body class
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -445,6 +450,17 @@ export default function ReactorView() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.classList.add('virtual-fullscreen-active');
+    } else {
+      document.body.classList.remove('virtual-fullscreen-active');
+    }
+    return () => {
+      document.body.classList.remove('virtual-fullscreen-active');
+    };
+  }, [isFullscreen]);
 
   const playerRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -1827,16 +1843,48 @@ export default function ReactorView() {
                 boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
               }}
             >
+              {/* Floating Back Button for mobile viewports to skip layout entirely */}
+              {window.innerWidth <= 950 && (
+                <button
+                  style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '20px',
+                    zIndex: 999999,
+                    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                    border: '2px solid rgba(255,255,255,0.2)',
+                    color: '#ffffff',
+                    padding: '8px 16px',
+                    borderRadius: '9999px',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.5)',
+                    fontFamily: "'Outfit', sans-serif"
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSwitchPlayer();
+                  }}
+                >
+                  ← Catálogo
+                </button>
+              )}
+
               {playerType === 'youtube' ? (
                 <>
                   <div 
                     id="yt-player-iframe" 
                     style={{ 
                       position: 'absolute', 
-                      top: '-9.5%', // Crop out YouTube top title bar
+                      top: 0, 
                       left: 0, 
                       width: '100%', 
-                      height: '119%', // Crop out YouTube bottom controls bar
+                      height: '100%', 
+                      transform: 'scale(1.22)',
                       border: 'none',
                       backgroundColor: '#000'
                     }}
