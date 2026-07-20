@@ -2491,16 +2491,18 @@ export default function ReactorView() {
       }}
     >
       {/* Rotate Prompt Overlay for Portrait Mobile Devices */}
-      <div className="rotate-device-prompt">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-          <line x1="12" y1="18" x2="12.01" y2="18" />
-        </svg>
-        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Gira tu dispositivo</h3>
-        <p style={{ margin: 0, fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '280px' }}>
-          Para una experiencia de aprendizaje interactiva óptima, gira tu celular horizontalmente (Modo Paisaje).
-        </p>
-      </div>
+      {currentView === 'player' && (
+        <div className="rotate-device-prompt">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
+          </svg>
+          <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Gira tu dispositivo</h3>
+          <p style={{ margin: 0, fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '280px' }}>
+            Para una experiencia de aprendizaje interactiva óptima, gira tu celular horizontalmente (Modo Paisaje).
+          </p>
+        </div>
+      )}
       
       {/* Intro Overlay — Minimalist TV style */}
       {introActive && (
