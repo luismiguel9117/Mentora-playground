@@ -293,6 +293,7 @@ export default function ReactorView() {
 
   // Load subtitles from public JSON files, localStorage or default preset when videoId changes
   useEffect(() => {
+    setHasStarted(false);
     let active = true;
     async function loadSubs() {
       if (!active) return;
@@ -362,6 +363,7 @@ export default function ReactorView() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFallbackSub, setIsFallbackSub] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   // Language Reactor specific flow controls
   const [isAutoPause, setIsAutoPause] = useState(false); // AP toggle
@@ -1584,6 +1586,9 @@ export default function ReactorView() {
 
   // --- RENDERING BRANCH 2: INTERACTIVE VIDEO PLAYER ---
   const renderInteractivePlayer = () => {
+    const lesson = videoCatalog.find(v => v.id === videoId);
+    const thumbnailSrc = lesson?.thumbnail || (lesson?.type === 'youtube' ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '');
+
     return (
       <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
         
@@ -1770,6 +1775,77 @@ export default function ReactorView() {
                     backgroundColor: '#000'
                   }}
                 ></video>
+              )}
+
+              {/* Glowing 3D Play Cover Overlay */}
+              {!hasStarted && (
+                <div 
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 15,
+                    backgroundImage: thumbnailSrc ? `url(${thumbnailSrc})` : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: '#000',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'opacity 0.3s ease'
+                  }}
+                  onClick={() => {
+                    if (playerType === 'youtube') {
+                      if (playerRef.current && playerRef.current.playVideo) {
+                        try {
+                          playerRef.current.playVideo();
+                          setHasStarted(true);
+                        } catch (e) {
+                          console.warn("Play failed:", e);
+                          setHasStarted(true);
+                        }
+                      } else {
+                        // In case API is not fully bound yet, force start
+                        setHasStarted(true);
+                        handleTogglePlay();
+                      }
+                    } else {
+                      if (localVideoRef.current) {
+                        localVideoRef.current.play()
+                          .then(() => {
+                            setHasStarted(true);
+                            setIsPlaying(true);
+                          })
+                          .catch(e => console.warn(e));
+                      }
+                    }
+                  }}
+                >
+                  {/* Custom pulsing 3D Play Button */}
+                  <div 
+                    className="custom-3d-play-btn"
+                    style={{
+                      width: '76px',
+                      height: '76px',
+                      borderRadius: '50%',
+                      backgroundColor: '#4f46e5',
+                      borderBottom: '5px solid #3730a3',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      fontSize: '2rem',
+                      paddingLeft: '6px',
+                      boxShadow: '0 8px 24px rgba(79, 70, 229, 0.45)',
+                      transition: 'transform 0.15s, background-color 0.15s, border-bottom 0.15s'
+                    }}
+                  >
+                    ▶
+                  </div>
+                </div>
               )}
 
               {/* Phrase Navigation: Left Vertical Controls (Next, Replay, Prev) */}

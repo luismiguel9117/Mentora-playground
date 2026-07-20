@@ -2064,3 +2064,34 @@ kbd {
   height: 119% !important;
 }
 
+/* Pulsing 3D Play Button Styles */
+@keyframes pulseGlow {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 12px 32px rgba(79, 70, 229, 0.65);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45);
+  }
+}
+
+.custom-3d-play-btn {
+  animation: pulseGlow 2.2s infinite ease-in-out;
+}
+
+.custom-3d-play-btn:hover {
+  transform: scale(1.06) !important;
+  background-color: #4338ca !important;
+}
+
+.custom-3d-play-btn:active {
+  transform: translateY(4px) scale(0.98) !important;
+  border-bottom-width: 0px !important;
+}
+
+
