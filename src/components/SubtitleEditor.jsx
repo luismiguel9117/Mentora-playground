@@ -157,7 +157,9 @@ export default function SubtitleEditor() {
             rel: 0,
             showinfo: 0,
             modestbranding: 1,
-            enablejsapi: 1
+            enablejsapi: 1,
+            cc_load_policy: 3, // Force closed captions OFF
+            iv_load_policy: 3  // Disable annotations
           },
           events: {
             'onReady': (event) => {

@@ -295,9 +295,28 @@ export default function ReactorView() {
   useEffect(() => {
     let active = true;
     async function loadSubs() {
+      if (!active) return;
+
+      // 1. Check localStorage first (local edits / Vercel persistence fallback)
+      try {
+        const saved = localStorage.getItem(`mentora_subtitles_${videoId}`);
+        if (saved) {
+          setCurrentSubtitles(JSON.parse(saved));
+          return;
+        }
+      } catch (e) {
+        console.warn("Failed to parse cached subtitles:", e);
+      }
+
+      // 2. Fallback to public directory JSON file
       try {
         const response = await fetch(`/subtitles/${videoId}.json`);
         if (response.ok && active) {
+          // Verify it is actual JSON and not SPA HTML index fallback
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('text/html')) {
+            throw new Error('SPA redirect HTML fallback');
+          }
           const data = await response.json();
           if (Array.isArray(data)) {
             setCurrentSubtitles(data);
@@ -309,21 +328,17 @@ export default function ReactorView() {
       }
 
       if (!active) return;
-      const saved = localStorage.getItem(`mentora_subtitles_${videoId}`);
-      if (saved) {
-        setCurrentSubtitles(JSON.parse(saved));
+      // 3. Built-in catalog presets fallback
+      if (videoId === 'UF8uR6Z6KLc') {
+        setCurrentSubtitles(jobsSubtitles);
+      } else if (videoId === 'LEjhYkp8P5M') {
+        setCurrentSubtitles(insideOutSubtitles);
+      } else if (videoId === 'hLAWN2_Z418') {
+        setCurrentSubtitles(lcdpSubtitles);
+      } else if (videoId === 'local') {
+        setCurrentSubtitles(localSubtitles);
       } else {
-        if (videoId === 'UF8uR6Z6KLc') {
-          setCurrentSubtitles(jobsSubtitles);
-        } else if (videoId === 'LEjhYkp8P5M') {
-          setCurrentSubtitles(insideOutSubtitles);
-        } else if (videoId === 'hLAWN2_Z418') {
-          setCurrentSubtitles(lcdpSubtitles);
-        } else if (videoId === 'local') {
-          setCurrentSubtitles(localSubtitles);
-        } else {
-          setCurrentSubtitles([]);
-        }
+        setCurrentSubtitles([]);
       }
     }
 
@@ -633,7 +648,9 @@ export default function ReactorView() {
               rel: 0,
               showinfo: 0,
               modestbranding: 1,
-              enablejsapi: 1
+              enablejsapi: 1,
+              cc_load_policy: 3, // Force closed captions OFF
+              iv_load_policy: 3  // Disable annotations
             },
             events: {
               'onStateChange': onPlayerStateChange
