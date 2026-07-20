@@ -972,37 +972,47 @@ export default function ReactorView() {
         category: "Cargando..."
       });
 
-      fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(wordKey)}&langpair=en|es`)
+      const transPromise = fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(wordKey)}&langpair=en|es`)
         .then(res => res.json())
-        .then(data => {
-          if (data && data.responseData) {
-            const translation = data.responseData.translatedText;
-            const newDefinition = {
-              translation,
-              alternatives: [translation],
-              category: "Palabra IA"
-            };
+        .catch(() => null);
 
-            setCurrentDictionary(prev => ({
-              ...prev,
-              [wordKey]: newDefinition
-            }));
+      const datamusePromise = fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(wordKey)}&max=3`)
+        .then(res => res.json())
+        .catch(() => []);
 
-            setHoveredWord(curr => {
-              if (curr && curr.key === wordKey) {
-                return {
-                  ...curr,
-                  loading: false,
-                  isSaved: savedWords.some(w => w.key === wordKey),
-                  ...newDefinition
-                };
-              }
-              return curr;
-            });
-          }
+      Promise.all([transPromise, datamusePromise])
+        .then(([transData, datamuseData]) => {
+          const translation = transData?.responseData?.translatedText || "Traducción no disponible";
+          const related = Array.isArray(datamuseData)
+            ? datamuseData.map(item => item.word).filter(w => w.toLowerCase() !== wordKey)
+            : [];
+          const alternatives = [translation, ...related];
+
+          const newDefinition = {
+            translation,
+            alternatives,
+            category: "Palabra IA"
+          };
+
+          setCurrentDictionary(prev => ({
+            ...prev,
+            [wordKey]: newDefinition
+          }));
+
+          setHoveredWord(curr => {
+            if (curr && curr.key === wordKey) {
+              return {
+                ...curr,
+                loading: false,
+                isSaved: savedWords.some(w => w.key === wordKey),
+                ...newDefinition
+              };
+            }
+            return curr;
+          });
         })
         .catch(err => {
-          console.warn("MyMemory translation failed:", err);
+          console.warn("Translation and synonyms fetch failed:", err);
           setHoveredWord(curr => {
             if (curr && curr.key === wordKey) {
               return {
@@ -1719,10 +1729,10 @@ export default function ReactorView() {
                     id="yt-player-iframe" 
                     style={{ 
                       position: 'absolute', 
-                      top: 0, 
+                      top: '-9.5%', // Crop out YouTube top title bar
                       left: 0, 
                       width: '100%', 
-                      height: '100%', 
+                      height: '119%', // Crop out YouTube bottom controls bar
                       border: 'none',
                       backgroundColor: '#000'
                     }}
