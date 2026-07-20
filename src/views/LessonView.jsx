@@ -36,6 +36,7 @@ export default function LessonView({ lesson, stats, onDeductHeart, onCompleteLes
       // Small timeout to allow render and sound initialisation
       const timer = setTimeout(() => {
         handlePlayAudio(lesson.words[introIndex].audioText);
+        sounds.playIntro();
       }, 300);
       return () => clearTimeout(timer);
     }
