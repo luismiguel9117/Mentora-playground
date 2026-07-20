@@ -21,7 +21,7 @@ const defaultVideoCatalog = [
     url: 'UF8uR6Z6KLc',
     category: 'Discursos / Educación',
     emoji: '🎓',
-    thumbnail: 'https://img.youtube.com/vi/UF8uR6Z6KLc/hqdefault.jpg'
+    thumbnail: '/assets/covers/jobs_stanford.jpg'
   },
   {
     id: 'Kat5Kbt092g',
@@ -30,7 +30,7 @@ const defaultVideoCatalog = [
     url: 'Kat5Kbt092g',
     category: 'Animación / Comedia',
     emoji: '🎬',
-    thumbnail: 'https://img.youtube.com/vi/Kat5Kbt092g/hqdefault.jpg'
+    thumbnail: '/assets/covers/inside_out.jpg'
   },
   {
     id: 'pL24Rby_53A',
@@ -39,7 +39,7 @@ const defaultVideoCatalog = [
     url: 'pL24Rby_53A',
     category: 'Series / Drama',
     emoji: '🇪🇸',
-    thumbnail: 'https://img.youtube.com/vi/pL24Rby_53A/hqdefault.jpg'
+    thumbnail: '/assets/covers/lcdp.jpg'
   },
   {
     id: 'local',
@@ -48,7 +48,7 @@ const defaultVideoCatalog = [
     url: 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4',
     category: 'Fantasía / Animación',
     emoji: '🐲',
-    thumbnail: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800'
+    thumbnail: '/assets/covers/sintel.jpg'
   },
   {
     id: 'vP4iYif190w',
@@ -57,7 +57,7 @@ const defaultVideoCatalog = [
     url: 'vP4iYif190w',
     category: 'Tecnología / Historia',
     emoji: '📱',
-    thumbnail: 'https://img.youtube.com/vi/vP4iYif190w/hqdefault.jpg'
+    thumbnail: '/assets/covers/iphone_2007.jpg'
   },
   {
     id: 'A03N43A0k6I',
@@ -66,7 +66,7 @@ const defaultVideoCatalog = [
     url: 'A03N43A0k6I',
     category: 'Cine / Fantasía',
     emoji: '🧙',
-    thumbnail: 'https://img.youtube.com/vi/A03N43A0k6I/hqdefault.jpg'
+    thumbnail: '/assets/covers/sorting_hat.jpg'
   }
 ];
 

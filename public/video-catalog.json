@@ -6,7 +6,7 @@
     "type": "youtube",
     "category": "Discursos / Educación",
     "emoji": "🎓",
-    "thumbnail": "https://img.youtube.com/vi/UF8uR6Z6KLc/hqdefault.jpg"
+    "thumbnail": "/assets/covers/jobs_stanford.jpg"
   },
   {
     "id": "Kat5Kbt092g",
@@ -15,7 +15,7 @@
     "type": "youtube",
     "category": "Animación / Comedia",
     "emoji": "🎬",
-    "thumbnail": "https://img.youtube.com/vi/Kat5Kbt092g/hqdefault.jpg"
+    "thumbnail": "/assets/covers/inside_out.jpg"
   },
   {
     "id": "pL24Rby_53A",
@@ -24,7 +24,7 @@
     "type": "youtube",
     "category": "Series / Drama",
     "emoji": "🇪🇸",
-    "thumbnail": "https://img.youtube.com/vi/pL24Rby_53A/hqdefault.jpg"
+    "thumbnail": "/assets/covers/lcdp.jpg"
   },
   {
     "id": "local",
@@ -33,7 +33,7 @@
     "type": "local",
     "category": "Fantasía / Animación",
     "emoji": "🐲",
-    "thumbnail": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800"
+    "thumbnail": "/assets/covers/sintel.jpg"
   },
   {
     "id": "vP4iYif190w",
@@ -42,7 +42,7 @@
     "type": "youtube",
     "category": "Tecnología / Historia",
     "emoji": "📱",
-    "thumbnail": "https://img.youtube.com/vi/vP4iYif190w/hqdefault.jpg"
+    "thumbnail": "/assets/covers/iphone_2007.jpg"
   },
   {
     "id": "A03N43A0k6I",
@@ -51,7 +51,7 @@
     "type": "youtube",
     "category": "Cine / Fantasía",
     "emoji": "🧙",
-    "thumbnail": "https://img.youtube.com/vi/A03N43A0k6I/hqdefault.jpg"
+    "thumbnail": "/assets/covers/sorting_hat.jpg"
   },
   {
     "id": "iNbM2SisJxc",

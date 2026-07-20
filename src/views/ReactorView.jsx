@@ -29,7 +29,7 @@ const defaultVideoCatalog = [
     duration: '15:00 min',
     color: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
     emoji: '🎓',
-    thumbnail: 'https://img.youtube.com/vi/UF8uR6Z6KLc/hqdefault.jpg'
+    thumbnail: '/assets/covers/jobs_stanford.jpg'
   },
   {
     id: 'Kat5Kbt092g',
@@ -42,7 +42,7 @@ const defaultVideoCatalog = [
     duration: '2:25 min',
     color: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)',
     emoji: '🎬',
-    thumbnail: 'https://img.youtube.com/vi/Kat5Kbt092g/hqdefault.jpg'
+    thumbnail: '/assets/covers/inside_out.jpg'
   },
   {
     id: 'pL24Rby_53A',
@@ -55,7 +55,7 @@ const defaultVideoCatalog = [
     duration: '1:45 min',
     color: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
     emoji: '🎭',
-    thumbnail: 'https://img.youtube.com/vi/pL24Rby_53A/hqdefault.jpg'
+    thumbnail: '/assets/covers/lcdp.jpg'
   },
   {
     id: 'local',
@@ -68,20 +68,20 @@ const defaultVideoCatalog = [
     duration: '0:52 min',
     color: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     emoji: '🐉',
-    thumbnail: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800'
+    thumbnail: '/assets/covers/sintel.jpg'
   },
   {
     id: 'vP4iYif190w',
     type: 'youtube',
     title: 'Presentación del primer iPhone (2007) - Steve Jobs',
-    description: 'Analiza el vocabulario de marketing y presentación de Steve Jobs al revolucionar la tecnología móvil.',
+    description: 'Analiza el vocabulario de marketing y presentation de Steve Jobs al revolucionar la tecnología móvil.',
     difficulty: 'B1 - Intermedio',
     difficultyKey: 'B1',
     category: 'Tecnología / Historia',
     duration: '1:11 min',
     color: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
     emoji: '📱',
-    thumbnail: 'https://img.youtube.com/vi/vP4iYif190w/hqdefault.jpg'
+    thumbnail: '/assets/covers/iphone_2007.jpg'
   },
   {
     id: 'A03N43A0k6I',
@@ -94,7 +94,7 @@ const defaultVideoCatalog = [
     duration: '0:42 min',
     color: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
     emoji: '🧙',
-    thumbnail: 'https://img.youtube.com/vi/A03N43A0k6I/hqdefault.jpg'
+    thumbnail: '/assets/covers/sorting_hat.jpg'
   }
 ];
 
