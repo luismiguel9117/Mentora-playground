@@ -558,12 +558,7 @@ export default function ReactorView() {
 
     // Trigger auto fullscreen on mobile viewport wrapper directly on select video card click
     if (window.innerWidth <= 950) {
-      const el = document.documentElement;
-      if (el.requestFullscreen) {
-        el.requestFullscreen()
-          .then(() => setIsFullscreen(true))
-          .catch(err => console.warn("Auto fullscreen failed on lobby click:", err));
-      }
+      setIsFullscreen(true);
       try {
         if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
           window.screen.orientation.lock('landscape').catch(() => {});
@@ -1545,7 +1540,7 @@ export default function ReactorView() {
               {/* Graphic Card Cover */}
               <div style={{
                 background: lesson.thumbnail ? `url(${lesson.thumbnail}) center/cover no-repeat` : (lesson.color || 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'),
-                height: '130px',
+                aspectRatio: '1 / 1', // Perfect square format for mobile/PC
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',

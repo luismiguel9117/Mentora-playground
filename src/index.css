@@ -2055,13 +2055,14 @@ kbd {
   overflow-y: auto !important;
 }
 
-/* Force YouTube Player cropping to hide controls, subtitles and title bar */
+/* Force YouTube Player cropping to hide controls, subtitles and title bar (aspect ratio preserved) */
 #yt-player-iframe {
   position: absolute !important;
-  top: -12.5% !important;
+  top: 0 !important;
   left: 0 !important;
   width: 100% !important;
-  height: 125% !important;
+  height: 100% !important;
+  transform: scale(1.22) !important;
 }
 
 /* Pulsing 3D Play Button Styles */
@@ -2092,6 +2093,62 @@ kbd {
 .custom-3d-play-btn:active {
   transform: translateY(4px) scale(0.98) !important;
   border-bottom-width: 0px !important;
+}
+
+/* Virtual Fullscreen active styles - forces full-viewport overlay on mobile */
+.virtual-fullscreen-active {
+  overflow: hidden !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: #000000 !important;
+  z-index: 999999 !important;
+}
+
+.virtual-fullscreen-active .view-container {
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+
+.virtual-fullscreen-active .reactor-layout {
+  grid-template-columns: 1fr !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  height: 100vh !important;
+  background-color: #000000 !important;
+}
+
+.virtual-fullscreen-active .transcript-sidebar {
+  display: none !important;
+}
+
+.virtual-fullscreen-active .player-column {
+  gap: 0 !important;
+  height: 100vh !important;
+  justify-content: center !important;
+}
+
+.virtual-fullscreen-active .video-player-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  padding-bottom: 0 !important;
+}
+
+.virtual-fullscreen-active #yt-player-iframe {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: scale(1.22) !important;
 }
 
 /* Rotate Prompt Overlay for Portrait Mobile */
@@ -2174,8 +2231,12 @@ kbd {
   
   /* YouTube iframe inside container scales */
   #yt-player-iframe {
-    height: 125% !important;
-    top: -12.5% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: scale(1.22) !important;
   }
   
   /* Make custom navigation buttons larger for mobile thumbs */
@@ -2216,6 +2277,7 @@ kbd {
     font-size: 0.95rem !important;
   }
 }
+
 
 /* Responsive catalog lobby design for mobile screens (portrait and landscape) */
 @media (max-width: 768px) {
