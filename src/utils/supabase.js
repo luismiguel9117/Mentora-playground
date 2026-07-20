@@ -1,16 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://voxzynltslpdpgqyfsej.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_3a9WwKsi5mlX_AkzsxgGfg_7FFX3Y0W';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn("Supabase credentials missing in environment variables. Please check your .env file.");
-}
-
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder'
-);
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Fallback presets if DB is not seeded yet or offline
 const defaultVideoCatalog = [
