@@ -72,6 +72,32 @@ const defaultVideoCatalog = [
 
 export async function getCatalog() {
   try {
+    // 1. Automatic database cleanup of old broken YouTube IDs (self-healing)
+    try {
+      const oldIdsToDelete = ['LEjhYkp8P5M', 'hLAWN2_Z418', 'vN4U5yKsh28', 'd3P-vTj-NFA'];
+      await supabase.from('video_catalog').delete().in('id', oldIdsToDelete);
+    } catch (cleanErr) {
+      console.warn("Database cleanup warning:", cleanErr.message);
+    }
+
+    // 2. Sync/Upsert new active default videos to database so they are always fresh
+    try {
+      await supabase
+        .from('video_catalog')
+        .upsert(defaultVideoCatalog.map(item => ({
+          id: item.id,
+          title: item.title,
+          url: item.url,
+          type: item.type,
+          category: item.category,
+          emoji: item.emoji,
+          thumbnail: item.thumbnail
+        })));
+    } catch (syncErr) {
+      console.warn("Database sync warning:", syncErr.message);
+    }
+
+    // 3. Fetch final catalog from database
     const { data, error } = await supabase
       .from('video_catalog')
       .select('*')
@@ -82,10 +108,6 @@ export async function getCatalog() {
     if (data && data.length > 0) {
       return data;
     }
-
-    // Auto-seed database if empty
-    console.log("Database catalog is empty. Seeding defaults...");
-    await seedCatalog();
     return defaultVideoCatalog;
   } catch (err) {
     console.error("Failed to fetch catalog from Supabase, returning default fallback:", err.message);
