@@ -1,7 +1,7 @@
 // src/components/SubtitleEditor.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { loadSubtitles, saveSubtitles } from '../store/subtitles';
+import { getCatalog, loadSubtitles, saveSubtitles } from '../utils/supabase';
 import '../styles/subtitle-editor.css';
 
 export default function SubtitleEditor() {
@@ -85,16 +85,13 @@ export default function SubtitleEditor() {
   useEffect(() => {
     async function initEditor() {
       try {
-        // 1. Fetch dynamic catalog to find the video metadata
+        // 1. Fetch dynamic catalog to find the video metadata from Supabase
         let matchedVideo = null;
         try {
-          const catalogRes = await fetch('/video-catalog.json');
-          if (catalogRes.ok) {
-            const catalogData = await catalogRes.json();
-            matchedVideo = catalogData.find(v => v.id === videoId);
-          }
+          const catalogData = await getCatalog();
+          matchedVideo = catalogData.find(v => v.id === videoId);
         } catch (catErr) {
-          console.warn('Failed to load JSON catalog, falling back:', catErr);
+          console.warn('Failed to load Supabase catalog, falling back:', catErr);
         }
 
         // If not found in dynamic catalog, fallback to hardcoded list

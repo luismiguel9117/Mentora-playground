@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getCatalog, loadSubtitles, saveSubtitles } from '../utils/supabase';
 import { sounds } from '../components/SoundManager';
 import Mascot from '../components/Mascot';
 
@@ -259,26 +261,53 @@ const lcdpDictionary = {
 };
 
 export default function ReactorView() {
-  const [currentView, setCurrentView] = useState('catalog'); // 'catalog' | 'player'
-  const [playerType, setPlayerType] = useState('youtube'); // 'youtube' | 'local'
-  const [videoId, setVideoId] = useState('UF8uR6Z6KLc'); // Steve Jobs video ID
-  const [localVideoUrl, setLocalVideoUrl] = useState('https://media.w3.org/2010/05/sintel/trailer_hd.mp4');
-  const [localVideoName, setLocalVideoName] = useState('Sintel HD Trailer');
+  const { videoId: routeVideoId } = useParams();
+  const navigate = useNavigate();
+
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('mentora_user_profile');
+    if (savedProfile) {
+      setUserProfile(JSON.parse(savedProfile));
+    } else {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleOnboardingSubmit = (profileData) => {
+    localStorage.setItem('mentora_user_profile', JSON.stringify(profileData));
+    setUserProfile(profileData);
+    setShowOnboarding(false);
+    sounds.playCompleted();
+  };
+
+  const [currentView, setCurrentView] = useState(() => routeVideoId ? 'player' : 'catalog'); // 'catalog' | 'player'
+  const [playerType, setPlayerType] = useState(() => {
+    if (routeVideoId) {
+      const defaultLesson = defaultVideoCatalog.find(v => v.id === routeVideoId);
+      if (defaultLesson) return defaultLesson.type;
+    }
+    return 'youtube';
+  });
+  const [videoId, setVideoId] = useState(() => routeVideoId || 'UF8uR6Z6KLc'); // Steve Jobs video ID
+  const [localVideoUrl, setLocalVideoUrl] = useState(() => {
+    if (routeVideoId === 'local') return 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4';
+    return 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4';
+  });
+  const [localVideoName, setLocalVideoName] = useState(() => {
+    if (routeVideoId === 'local') return 'Sintel HD Trailer';
+    return 'Sintel HD Trailer';
+  });
 
   const [videoCatalog, setVideoCatalog] = useState(defaultVideoCatalog);
 
-  // Load dynamic video catalog from JSON file on mount
+  // Load dynamic video catalog from Supabase on mount
   useEffect(() => {
     async function loadCatalog() {
-      try {
-        const res = await fetch('/video-catalog.json');
-        if (res.ok) {
-          const data = await res.json();
-          setVideoCatalog(data);
-        }
-      } catch (e) {
-        console.warn("Failed to load video-catalog.json, using static fallback:", e);
-      }
+      const data = await getCatalog();
+      setVideoCatalog(data);
     }
     loadCatalog();
   }, []);
@@ -288,58 +317,45 @@ export default function ReactorView() {
   const [difficultyFilter, setDifficultyFilter] = useState('Todos');
 
   // Single source of truth states for subtitles and vocabulary dictionary
-  const [currentSubtitles, setCurrentSubtitles] = useState(jobsSubtitles);
-  const [currentDictionary, setCurrentDictionary] = useState(jobsDictionary);
+  const [currentSubtitles, setCurrentSubtitles] = useState(() => {
+    if (routeVideoId === 'UF8uR6Z6KLc') return jobsSubtitles;
+    if (routeVideoId === 'LEjhYkp8P5M') return insideOutSubtitles;
+    if (routeVideoId === 'hLAWN2_Z418') return lcdpSubtitles;
+    if (routeVideoId === 'local') return localSubtitles;
+    return [];
+  });
+  const [currentDictionary, setCurrentDictionary] = useState(() => {
+    if (routeVideoId === 'UF8uR6Z6KLc') return jobsDictionary;
+    if (routeVideoId === 'LEjhYkp8P5M') return insideOutDictionary;
+    if (routeVideoId === 'hLAWN2_Z418') return lcdpDictionary;
+    if (routeVideoId === 'local') return localDictionary;
+    return {};
+  });
 
-  // Load subtitles from public JSON files, localStorage or default preset when videoId changes
+  // Load subtitles from Supabase or default preset when videoId changes
   useEffect(() => {
     setHasStarted(false);
     let active = true;
     async function loadSubs() {
       if (!active) return;
-
-      // 1. Check localStorage first (local edits / Vercel persistence fallback)
-      try {
-        const saved = localStorage.getItem(`mentora_subtitles_${videoId}`);
-        if (saved) {
-          setCurrentSubtitles(JSON.parse(saved));
-          return;
-        }
-      } catch (e) {
-        console.warn("Failed to parse cached subtitles:", e);
-      }
-
-      // 2. Fallback to public directory JSON file
-      try {
-        const response = await fetch(`/subtitles/${videoId}.json`);
-        if (response.ok && active) {
-          // Verify it is actual JSON and not SPA HTML index fallback
-          const contentType = response.headers.get('content-type') || '';
-          if (contentType.includes('text/html')) {
-            throw new Error('SPA redirect HTML fallback');
-          }
-          const data = await response.json();
-          if (Array.isArray(data)) {
-            setCurrentSubtitles(data);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to fetch public subtitle file:", err);
-      }
-
+      const data = await loadSubtitles(videoId);
       if (!active) return;
-      // 3. Built-in catalog presets fallback
-      if (videoId === 'UF8uR6Z6KLc') {
-        setCurrentSubtitles(jobsSubtitles);
-      } else if (videoId === 'LEjhYkp8P5M') {
-        setCurrentSubtitles(insideOutSubtitles);
-      } else if (videoId === 'hLAWN2_Z418') {
-        setCurrentSubtitles(lcdpSubtitles);
-      } else if (videoId === 'local') {
-        setCurrentSubtitles(localSubtitles);
+
+      if (data && data.length > 0) {
+        setCurrentSubtitles(data);
       } else {
-        setCurrentSubtitles([]);
+        // Fallback to built-in presets if no subtitles in database
+        if (videoId === 'UF8uR6Z6KLc') {
+          setCurrentSubtitles(jobsSubtitles);
+        } else if (videoId === 'LEjhYkp8P5M') {
+          setCurrentSubtitles(insideOutSubtitles);
+        } else if (videoId === 'hLAWN2_Z418') {
+          setCurrentSubtitles(lcdpSubtitles);
+        } else if (videoId === 'local') {
+          setCurrentSubtitles(localSubtitles);
+        } else {
+          setCurrentSubtitles([]);
+        }
       }
     }
 
@@ -348,9 +364,13 @@ export default function ReactorView() {
   }, [videoId]);
 
   // Persist all subtitle edits
-  const saveAllSubtitles = (updatedList) => {
+  const saveAllSubtitles = async (updatedList) => {
     setCurrentSubtitles(updatedList);
-    localStorage.setItem(`mentora_subtitles_${videoId}`, JSON.stringify(updatedList));
+    try {
+      await saveSubtitles(videoId, updatedList);
+    } catch (e) {
+      console.error("Failed to save subtitles:", e);
+    }
   };
 
   const [currentTime, setCurrentTime] = useState(0);
@@ -566,11 +586,7 @@ export default function ReactorView() {
 
   // Switch to specific Video Lesson from Catalog
   const handleSelectLesson = (lesson) => {
-    safeCancelSpeech();
-    setIsPlaying(false);
-    setIsFallbackSub(false);
     sounds.playCorrect();
-    setHasStarted(true); // Skip cover overlay to go direct to video
 
     // Trigger auto fullscreen on mobile viewport wrapper directly on select video card click
     if (window.innerWidth <= 950) {
@@ -582,50 +598,66 @@ export default function ReactorView() {
       } catch (e) {}
     }
 
-    if (lesson.type === 'youtube') {
-      setPlayerType('youtube');
-      setVideoId(lesson.id);
-      
-      // Load corresponding subtitles and dictionaries
-      if (lesson.id === 'UF8uR6Z6KLc') {
-        setCurrentDictionary(jobsDictionary);
-      } else if (lesson.id === 'LEjhYkp8P5M') {
-        setCurrentDictionary(insideOutDictionary);
-      } else if (lesson.id === 'hLAWN2_Z418') {
-        setCurrentDictionary(lcdpDictionary);
-      } else {
-        setCurrentDictionary({});
-      }
-    } else {
-      setPlayerType('local');
-      setVideoId(lesson.id);
-      setLocalVideoUrl(lesson.url || 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4');
-      setLocalVideoName(lesson.title || 'Video Local');
-      setCurrentDictionary(lesson.id === 'local' ? localDictionary : {});
-    }
-
-    setCurrentView('player');
+    navigate(`/video/${lesson.id}`);
   };
 
   const handleSwitchPlayer = () => {
-    // Navigate back to the Catalog Selection Lobby
-    safeCancelSpeech();
-    setIsPlaying(false);
-    setIsFullscreen(false); // Make sure virtual fullscreen is closed
-    
-    // Destroy player instance to avoid dead iframe bindings
-    if (playerRef.current) {
-      try {
-        if (playerRef.current.destroy) {
-          playerRef.current.destroy();
-        }
-      } catch (e) {}
-      playerRef.current = null;
-    }
-    
-    setCurrentView('catalog');
     sounds.playCorrect();
+    navigate('/');
   };
+
+  // Sync state with router parameter videoId
+  useEffect(() => {
+    safeCancelSpeech();
+    if (routeVideoId) {
+      const lesson = videoCatalog.find(v => v.id === routeVideoId);
+      if (lesson) {
+        setIsPlaying(false);
+        setIsFallbackSub(false);
+        setHasStarted(true); // Skip cover overlay to go direct to video
+
+        if (lesson.type === 'youtube') {
+          setPlayerType('youtube');
+          setVideoId(lesson.id);
+          
+          if (lesson.id === 'UF8uR6Z6KLc') {
+            setCurrentDictionary(jobsDictionary);
+          } else if (lesson.id === 'LEjhYkp8P5M') {
+            setCurrentDictionary(insideOutDictionary);
+          } else if (lesson.id === 'hLAWN2_Z418') {
+            setCurrentDictionary(lcdpDictionary);
+          } else {
+            setCurrentDictionary({});
+          }
+        } else {
+          setPlayerType('local');
+          setVideoId(lesson.id);
+          setLocalVideoUrl(lesson.url || 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4');
+          setLocalVideoName(lesson.title || 'Video Local');
+          setCurrentDictionary(lesson.id === 'local' ? localDictionary : {});
+        }
+        setCurrentView('player');
+      } else {
+        if (videoCatalog.length > 0 && videoCatalog !== defaultVideoCatalog) {
+          navigate('/');
+        }
+      }
+    } else {
+      setIsPlaying(false);
+      setIsFullscreen(false); // Make sure virtual fullscreen is closed
+      
+      // Destroy player instance to avoid dead iframe bindings
+      if (playerRef.current) {
+        try {
+          if (playerRef.current.destroy) {
+            playerRef.current.destroy();
+          }
+        } catch (e) {}
+        playerRef.current = null;
+      }
+      setCurrentView('catalog');
+    }
+  }, [routeVideoId, videoCatalog, navigate]);
 
   // Adjust Playback Speed for YouTube and HTML5 video
   const handlePlaybackSpeedChange = (speed) => {
@@ -1578,17 +1610,19 @@ export default function ReactorView() {
             >
               {/* Graphic Card Cover */}
               <div style={{
-                background: lesson.thumbnail ? `url(${lesson.thumbnail}) center/cover no-repeat` : (lesson.color || 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'),
+                background: (lesson.thumbnail || (lesson.type === 'youtube' ? `https://img.youtube.com/vi/${lesson.id}/hqdefault.jpg` : ''))
+                  ? `url(${lesson.thumbnail || `https://img.youtube.com/vi/${lesson.id}/hqdefault.jpg`}) center/cover no-repeat`
+                  : (lesson.color || 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'),
                 aspectRatio: '1 / 1', // Perfect square format for mobile/PC
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: lesson.thumbnail ? '0rem' : '3.5rem',
+                fontSize: (lesson.thumbnail || lesson.type === 'youtube') ? '0rem' : '3.5rem',
                 color: '#ffffff',
                 position: 'relative'
               }}>
-                {!lesson.thumbnail && (lesson.emoji || '🎬')}
+                {!(lesson.thumbnail || lesson.type === 'youtube') && (lesson.emoji || '🎬')}
                 {/* Duration Tag */}
                 <span style={{
                   position: 'absolute',
@@ -1717,7 +1751,7 @@ export default function ReactorView() {
           </div>
         </div>
         
-        <Mascot mood="happy" text="¡Hola! Elige cualquiera de los vídeos del catálogo o sube el tuyo propio para empezar a aprender inglés con Cine Reactor." />
+        <Mascot mood="happy" text={`¡Hola${userProfile?.name ? ' ' + userProfile.name : ''}! Elige cualquiera de los vídeos del catálogo o sube el tuyo propio para empezar a aprender inglés con Cine Reactor.`} />
       </div>
     );
   };
@@ -2548,6 +2582,190 @@ export default function ReactorView() {
     );
   };
 
+  const renderOnboardingModal = () => {
+    if (!showOnboarding) return null;
+
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(11, 15, 25, 0.9)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '1.5rem',
+        animation: 'fadeIn 0.4s ease-out'
+      }}>
+        <div style={{
+          backgroundColor: '#1f2937',
+          border: '2px solid #374151',
+          borderRadius: '24px',
+          padding: '2.5rem',
+          maxWidth: '450px',
+          width: '100%',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+          fontFamily: "'Inter', sans-serif",
+          color: '#ffffff',
+          animation: 'scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+        }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <span style={{ fontSize: '3rem' }}>🚀</span>
+            <h2 style={{
+              fontSize: '1.8rem',
+              fontWeight: 800,
+              fontFamily: "'Outfit', sans-serif",
+              color: '#ffffff',
+              marginTop: '10px',
+              marginBottom: '5px'
+            }}>
+              ¡Bienvenido a Mentora!
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
+              Personalicemos tu experiencia para empezar a aprender.
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const name = e.target.username.value.trim();
+            if (!name) return alert('Por favor, ingresa tu nombre.');
+            
+            const level = e.target.level.value;
+            const goal = e.target.goal.value;
+
+            handleOnboardingSubmit({ name, level, goal });
+          }}>
+            {/* Input Name */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', tracking: '0.05em', color: '#9ca3af', marginBottom: '6px' }}>
+                ¿Cuál es tu nombre?
+              </label>
+              <input
+                type="text"
+                name="username"
+                placeholder="Escribe tu nombre aquí..."
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 18px',
+                  backgroundColor: '#374151',
+                  border: '2.5px solid #4b5563',
+                  borderRadius: '12px',
+                  color: '#ffffff',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
+                onBlur={(e) => e.target.style.borderColor = '#4b5563'}
+              />
+            </div>
+
+            {/* Select Level */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', tracking: '0.05em', color: '#9ca3af', marginBottom: '6px' }}>
+                ¿Cuál es tu nivel de inglés actual?
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                {[
+                  { value: 'A2', label: 'Básico', color: '#10b981' },
+                  { value: 'B1', label: 'Intermedio', color: '#0ea5e9' },
+                  { value: 'B2', label: 'Avanzado', color: '#fbbf24' }
+                ].map(lvl => (
+                  <label key={lvl.value} style={{ cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="level"
+                      value={lvl.value}
+                      defaultChecked={lvl.value === 'B1'}
+                      style={{ display: 'none' }}
+                    />
+                    <div className="onboarding-card-option" style={{
+                      textAlign: 'center',
+                      padding: '12px 4px',
+                      borderRadius: '12px',
+                      border: '2px solid #4b5563',
+                      backgroundColor: '#1f2937',
+                      fontSize: '0.85rem',
+                      color: '#9ca3af',
+                      fontWeight: 700,
+                      transition: 'all 0.2s'
+                    }}>
+                      <div style={{ fontSize: '0.7rem', color: lvl.color, marginBottom: '2px' }}>● {lvl.value}</div>
+                      {lvl.label}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Daily Goal */}
+            <div style={{ marginBottom: '2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', tracking: '0.05em', color: '#9ca3af', marginBottom: '6px' }}>
+                Meta diaria de estudio
+              </label>
+              <select
+                name="goal"
+                defaultValue="10"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  backgroundColor: '#374151',
+                  border: '2.5px solid #4b5563',
+                  borderRadius: '12px',
+                  color: '#ffffff',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <option value="5">Casual (5 min al día)</option>
+                <option value="10">Regular (10 min al día)</option>
+                <option value="15">Serio (15 min al día)</option>
+                <option value="20">Intenso (20 min al día)</option>
+              </select>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="btn-3d btn-primary"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '1rem',
+                fontWeight: 700,
+                borderRadius: '16px',
+                border: 'none',
+                background: '#4f46e5',
+                color: '#ffffff',
+                cursor: 'pointer',
+                boxShadow: '0 4px 0 #312e81',
+                transition: 'transform 0.1s, box-shadow 0.1s'
+              }}
+              onMouseDown={(e) => {
+                e.target.style.transform = 'translateY(4px)';
+                e.target.style.boxShadow = '0 0px 0 transparent';
+              }}
+              onMouseUp={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 0 #312e81';
+              }}
+            >
+              Comenzar mi Aventura ⚡
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div 
       className="view-container" 
@@ -2812,9 +3030,11 @@ export default function ReactorView() {
         onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.458L0 24zm6.59-4.846c1.62.962 3.21 1.463 4.957 1.464 5.389 0 9.774-4.382 9.777-9.769.002-2.61-1.002-5.066-2.827-6.892C16.677 2.13 14.228.99 11.62.99a9.77 9.77 0 0 0-9.768 9.77c-.001 1.83.499 3.491 1.482 5.111L2.33 21.57l6.317-1.656zm12.188-6.186c-.269-.134-1.595-.788-1.842-.878-.247-.09-.427-.134-.607.134-.18.269-.696.878-.853 1.057-.157.18-.314.202-.583.067-1.161-.58-1.921-.967-2.678-2.267-.201-.346-.201-.646-.067-.781.12-.121.269-.314.404-.471.135-.157.18-.269.269-.449.09-.18.045-.337-.022-.471-.067-.134-.607-1.459-.831-1.997-.219-.526-.44-.455-.607-.463-.157-.008-.337-.01-.517-.01a1.002 1.002 0 0 0-.719.337c-.247.269-.943.921-.943 2.246s.965 2.605 1.1 2.785c.134.18 1.9 2.901 4.6 4.067.643.277 1.144.443 1.536.568.647.206 1.236.177 1.701.108.518-.077 1.595-.651 1.819-1.28.224-.63.224-1.169.157-1.28-.067-.113-.247-.18-.517-.313z"/>
+          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.458L0 24zm6.59-4.846c1.62.962 3.21 1.463 4.957 1.464 5.389 0 9.774-4.382 9.777-9.769.002-2.61-1.002-5.066-2.827-6.892C16.677 2.13 14.228.99a9.77 9.77 0 0 0-9.768 9.77c-.001 1.83.499 3.491 1.482 5.111L2.33 21.57l6.317-1.656zm12.188-6.186c-.269-.134-1.595-.788-1.842-.878-.247-.09-.427-.134-.607.134-.18.269-.696.878-.853 1.057-.157.18-.314.202-.583.067-1.161-.58-1.921-.967-2.678-2.267-.201-.346-.201-.646-.067-.781.12-.121.269-.314.404-.471.135-.157.18-.269.269-.449.09-.18.045-.337-.022-.471-.067-.134-.607-1.459-.831-1.997-.219-.526-.44-.455-.607-.463-.157-.008-.337-.01-.517-.01a1.002 1.002 0 0 0-.719.337c-.247.269-.943.921-.943 2.246s.965 2.605 1.1 2.785c.134.18 1.9 2.901 4.6 4.067.643.277 1.144.443 1.536.568.647.206 1.236.177 1.701.108.518-.077 1.595-.651 1.819-1.28.224-.63.224-1.169.157-1.28-.067-.113-.247-.18-.517-.313z"/>
         </svg>
       </a>
+      {renderOnboardingModal()}
     </div>
   );
 }
+

@@ -5,7 +5,8 @@
     "url": "UF8uR6Z6KLc",
     "type": "youtube",
     "category": "Discursos / Educación",
-    "emoji": "🎓"
+    "emoji": "🎓",
+    "thumbnail": "https://img.youtube.com/vi/UF8uR6Z6KLc/hqdefault.jpg"
   },
   {
     "id": "LEjhYkp8P5M",
@@ -13,7 +14,8 @@
     "url": "LEjhYkp8P5M",
     "type": "youtube",
     "category": "Animación / Comedia",
-    "emoji": "🎬"
+    "emoji": "🎬",
+    "thumbnail": "https://img.youtube.com/vi/LEjhYkp8P5M/hqdefault.jpg"
   },
   {
     "id": "hLAWN2_Z418",
@@ -21,7 +23,8 @@
     "url": "hLAWN2_Z418",
     "type": "youtube",
     "category": "Series / Drama",
-    "emoji": "🇪🇸"
+    "emoji": "🇪🇸",
+    "thumbnail": "https://img.youtube.com/vi/hLAWN2_Z418/hqdefault.jpg"
   },
   {
     "id": "local",
@@ -29,7 +32,8 @@
     "url": "https://media.w3.org/2010/05/sintel/trailer_hd.mp4",
     "type": "local",
     "category": "Fantasía / Animación",
-    "emoji": "🐲"
+    "emoji": "🐲",
+    "thumbnail": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800"
   },
   {
     "id": "iNbM2SisJxc",
@@ -37,7 +41,8 @@
     "url": "iNbM2SisJxc",
     "type": "youtube",
     "category": "Categoria",
-    "emoji": "🎬"
+    "emoji": "🎬",
+    "thumbnail": "https://img.youtube.com/vi/iNbM2SisJxc/hqdefault.jpg"
   },
   {
     "id": "gdsQHuifwDY",
@@ -46,7 +51,7 @@
     "type": "youtube",
     "category": "aa",
     "emoji": "🎬",
-    "thumbnail": ""
+    "thumbnail": "https://img.youtube.com/vi/gdsQHuifwDY/hqdefault.jpg"
   },
   {
     "id": "QyGlhM_S5_0",
@@ -55,6 +60,6 @@
     "type": "youtube",
     "category": "aa",
     "emoji": "🎬",
-    "thumbnail": "a"
+    "thumbnail": "https://img.youtube.com/vi/QyGlhM_S5_0/hqdefault.jpg"
   }
 ]

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { checkPassword } from '../utils/auth';
 import { useNavigate } from 'react-router-dom';
-import { saveSubtitles } from '../store/subtitles';
+import { getCatalog, saveVideoToCatalog, deleteVideoFromCatalog, saveSubtitles } from '../utils/supabase';
 import LoginPage from '../components/ui/gaming-login';
 import '../styles/config.css';
 
@@ -59,17 +59,12 @@ export default function ConfigView() {
     reader.readAsDataURL(file);
   };
 
-  // Load catalog from public directory
+  // Load catalog from Supabase
   useEffect(() => {
     async function fetchCatalog() {
       try {
-        const res = await fetch('/video-catalog.json');
-        if (res.ok) {
-          const data = await res.json();
-          setCatalog(data);
-        } else {
-          console.error('Failed to load video catalog JSON');
-        }
+        const data = await getCatalog();
+        setCatalog(data);
       } catch (e) {
         console.error('Failed to fetch catalog:', e);
       } finally {
@@ -152,14 +147,8 @@ export default function ConfigView() {
     const updatedCatalog = [...catalog, newVideo];
 
     try {
-      // 1. Save updated catalog
-      const res = await fetch('/api/save-catalog', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ catalog: updatedCatalog })
-      });
-
-      if (!res.ok) throw new Error('Error al actualizar el archivo de catálogo.');
+      // 1. Save video to Supabase Catalog
+      await saveVideoToCatalog(newVideo);
 
       // 2. Initialize empty subtitle template for this video ID to prevent 404s
       await saveSubtitles(finalId, [
@@ -180,7 +169,7 @@ export default function ConfigView() {
       setNewCategory('');
       setNewEmoji('🎬');
       setNewThumbnail('');
-      alert('Video agregado exitosamente al catálogo.');
+      alert('Video agregado exitosamente al catálogo en Supabase.');
     } catch (err) {
       console.error(err);
       alert('Error al agregar el video: ' + err.message);
@@ -195,16 +184,11 @@ export default function ConfigView() {
     const updatedCatalog = catalog.filter(v => v.id !== videoId);
 
     try {
-      const res = await fetch('/api/save-catalog', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ catalog: updatedCatalog })
-      });
-
-      if (!res.ok) throw new Error('Error al actualizar el archivo de catálogo.');
+      // Remove video from Supabase Catalog
+      await deleteVideoFromCatalog(videoId);
 
       setCatalog(updatedCatalog);
-      alert('Video removido del catálogo exitosamente.');
+      alert('Video removido del catálogo de Supabase exitosamente.');
     } catch (err) {
       console.error(err);
       alert('Error al remover el video: ' + err.message);
@@ -220,18 +204,16 @@ export default function ConfigView() {
     });
 
     try {
-      const res = await fetch('/api/save-catalog', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ catalog: updatedCatalog })
-      });
-
-      if (!res.ok) throw new Error('Error al actualizar la portada en el catálogo.');
+      const targetVideo = updatedCatalog.find(v => v.id === videoId);
+      if (targetVideo) {
+        // Save the updated video to Supabase Catalog (includes the new thumbnail)
+        await saveVideoToCatalog(targetVideo);
+      }
 
       setCatalog(updatedCatalog);
       setEditingThumbnailVideoId(null);
       setTempThumbnailUrl('');
-      alert('Portada actualizada exitosamente.');
+      alert('Portada actualizada exitosamente en Supabase.');
     } catch (err) {
       console.error(err);
       alert('Error al guardar la portada: ' + err.message);

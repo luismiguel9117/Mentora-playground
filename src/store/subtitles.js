@@ -13,7 +13,7 @@ export async function loadSubtitles(videoId) {
 
   // 2. Fallback to public directory JSON file
   try {
-    const response = await fetch(`/subtitles/${videoId}.json`);
+    const response = await fetch(`/subtitles/${videoId}.json?t=${Date.now()}`);
     if (!response.ok) {
       throw new Error('Failed to fetch from server');
     }

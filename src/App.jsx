@@ -19,6 +19,7 @@ function AppContent({ stats }) {
         {showHeader && <Header activeView="reactor" stats={stats} />}
         <Routes>
           <Route path="/" element={<ReactorView />} />
+          <Route path="/video/:videoId" element={<ReactorView />} />
           <Route path="/config" element={<ConfigView />} />
           <Route path="/config/editor/:videoId" element={<SubtitleEditor />} />
         </Routes>
